@@ -1,0 +1,138 @@
+import { ReactNode } from 'react'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider, useAuth } from '@/hooks/useAuth'
+import AppLayout from '@/components/layout/AppLayout'
+import LoginPage from '@/app/auth/LoginPage'
+import DashboardPage from '@/app/dashboard/DashboardPage'
+import OrdersPage from '@/app/orders/OrdersPage'
+import OrderDetailPage from '@/app/orders/OrderDetailPage'
+import NewOrderPage from '@/app/orders/NewOrderPage'
+import CustomersPage from '@/app/customers/CustomersPage'
+import InventoryPage from '@/app/inventory/InventoryPage'
+import InvoicesPage from '@/app/invoices/InvoicesPage'
+import InvoiceDetailPage from '@/app/invoices/InvoiceDetailPage'
+import PaymentsPage from '@/app/payments/PaymentsPage'
+import DispatchPage from '@/app/dispatch/DispatchPage'
+import ReturnsPage from '@/app/returns/ReturnsPage'
+import PlaceholderPage from '@/components/common/PlaceholderPage'
+
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm text-muted-foreground">Loading RentalOps...</p>
+      </div>
+    </div>
+  )
+}
+
+function ErrorScreen({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-6">
+      <div className="max-w-md w-full bg-card border border-red-200 rounded-xl p-8 text-center space-y-4">
+        <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+          <span className="text-red-600 text-xl">!</span>
+        </div>
+        <h2 className="text-lg font-semibold text-foreground">Unable to load your account</h2>
+        <p className="text-sm text-muted-foreground leading-relaxed">{message}</p>
+        <div className="space-y-2 text-xs text-muted-foreground bg-muted rounded-lg p-3 text-left">
+          <p className="font-medium">Common fixes:</p>
+          <p>• Make sure a row exists in the <code>profiles</code> table for your user ID</p>
+          <p>• Make sure the profile's <code>company_id</code> matches a row in <code>companies</code></p>
+          <p>• Check browser console for the exact Supabase error</p>
+        </div>
+        <div className="flex gap-2 justify-center">
+          <button
+            onClick={onRetry}
+            className="btn-primary text-sm"
+          >
+            Try again
+          </button>
+          <button
+            onClick={() => window.location.href = '/login'}
+            className="btn-secondary text-sm"
+          >
+            Back to login
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ProtectedRoute({ children }: { children: ReactNode }) {
+  const { session, loading, error } = useAuth()
+
+  if (loading) return <LoadingScreen />
+
+  if (error) {
+    return (
+      <ErrorScreen
+        message={error}
+        onRetry={() => window.location.reload()}
+      />
+    )
+  }
+
+  if (!session) return <Navigate to="/login" replace />
+  return <>{children}</>
+}
+
+function AppRoutes() {
+  const { session } = useAuth()
+
+  return (
+    <Routes>
+      {/* Auth */}
+      <Route
+        path="/login"
+        element={session ? <Navigate to="/" replace /> : <LoginPage />}
+      />
+
+      {/* Protected app routes */}
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<DashboardPage />} />
+
+        <Route path="orders" element={<OrdersPage />} />
+        <Route path="orders/new" element={<NewOrderPage />} />
+        <Route path="orders/:id" element={<OrderDetailPage />} />
+
+        <Route path="customers" element={<CustomersPage />} />
+        <Route path="inventory" element={<InventoryPage />} />
+
+        <Route path="invoices" element={<InvoicesPage />} />
+        <Route path="invoices/:id" element={<InvoiceDetailPage />} />
+
+        <Route path="payments" element={<PaymentsPage />} />
+        <Route path="dispatch" element={<DispatchPage />} />
+        <Route path="returns" element={<ReturnsPage />} />
+
+        <Route path="calendar"  element={<PlaceholderPage title="Calendar" description="Event calendar view — coming in Phase 3" icon="Calendar" />} />
+        <Route path="damages"   element={<PlaceholderPage title="Damage Reports" description="Damage reporting and assessment — coming in Phase 3" icon="AlertTriangle" />} />
+        <Route path="expenses"  element={<PlaceholderPage title="Expenses" description="Operational expense tracking — coming in Phase 3" icon="Receipt" />} />
+        <Route path="reports"   element={<PlaceholderPage title="Reports" description="Financial and operational reports — coming in Phase 3" icon="BarChart3" />} />
+        <Route path="settings"  element={<PlaceholderPage title="Settings" description="Company settings and configuration" icon="Settings" />} />
+      </Route>
+
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </BrowserRouter>
+  )
+}
