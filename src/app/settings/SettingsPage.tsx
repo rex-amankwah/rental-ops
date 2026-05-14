@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
-import { Users, Building2, ChevronRight, Shield } from 'lucide-react'
+import { Users, Building2, ChevronRight, Shield, Globe, Mail, Phone, MapPin } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
 
 const SECTIONS = [
   {
@@ -22,6 +23,8 @@ const SECTIONS = [
 
 export default function SettingsPage() {
   const navigate = useNavigate()
+  const { profile } = useAuth()
+  const co = profile?.companies
 
   return (
     <div className="max-w-3xl space-y-6 animate-fade-in">
@@ -65,6 +68,60 @@ export default function SettingsPage() {
           )
         })}
       </div>
+
+      {/* Company info */}
+      {co && (
+        <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <Building2 className="w-4 h-4 text-muted-foreground" />
+            <p className="text-sm font-semibold text-foreground">Company Information</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2.5">
+            {co.name && (
+              <div className="flex items-start gap-2 text-sm">
+                <Globe className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Company</p>
+                  <p className="text-foreground font-medium">{co.name}</p>
+                </div>
+              </div>
+            )}
+            {(co.support_email ?? co.email) && (
+              <div className="flex items-start gap-2 text-sm">
+                <Mail className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Support Email</p>
+                  <p className="text-foreground">{co.support_email ?? co.email}</p>
+                </div>
+              </div>
+            )}
+            {(co.support_phone ?? co.phone) && (
+              <div className="flex items-start gap-2 text-sm">
+                <Phone className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Support Phone</p>
+                  <p className="text-foreground">{co.support_phone ?? co.phone}</p>
+                </div>
+              </div>
+            )}
+            {(co.city || co.state) && (
+              <div className="flex items-start gap-2 text-sm">
+                <MapPin className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Location</p>
+                  <p className="text-foreground">
+                    {[co.city, co.state].filter(Boolean).join(', ')}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+          <p className="text-[11px] text-muted-foreground pt-1 border-t border-border">
+            To update company details, contact your Supabase administrator or use the
+            Supabase Dashboard → Table Editor → companies.
+          </p>
+        </div>
+      )}
 
       <div className="bg-card border border-border rounded-xl p-4 flex items-start gap-3">
         <Shield className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />

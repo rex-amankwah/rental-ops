@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import Modal from '@/components/common/Modal'
 import { formatDate, formatCurrency, DISPATCH_STATUS_CONFIG } from '@/lib/constants'
 import { canEdit } from '@/lib/roles'
+import { logActivity } from '@/lib/activityLog'
 import type { Dispatch, RentalOrder, Customer } from '@/types/database'
 import type { DispatchStatus } from '@/types/database'
 
@@ -251,6 +252,19 @@ export default function DispatchPage() {
     setDispatches(prev => prev.map(d =>
       d.id === id ? { ...d, status: nextStatus } : d
     ))
+
+    const d = dispatches.find(x => x.id === id)
+    logActivity({
+      company_id:  profile!.company_id,
+      order_id:    d?.order_id ?? null,
+      actor_id:    profile!.id,
+      actor_name:  profile!.full_name ?? profile!.email,
+      entity_type: 'dispatch',
+      entity_id:   id,
+      action:      'advance_status',
+      description: `Dispatch advanced to ${DISPATCH_STATUS_CONFIG[nextStatus].label}`,
+      metadata:    { from: d?.status, to: nextStatus },
+    })
   }
 
   const byStatus = (status: DispatchStatus) =>

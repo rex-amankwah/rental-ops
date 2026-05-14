@@ -1,8 +1,9 @@
 import {
   ShieldCheck, Briefcase, Eye, ArrowRight, Truck,
   Package, BarChart3, Wrench, BookOpen, CheckCircle2,
-  Clock, Info, RotateCcw, AlertTriangle, FileText,
+  Clock, Info, RotateCcw, AlertTriangle, FileText, Mail, Phone,
 } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
 
@@ -117,6 +118,11 @@ function FeaturePill({ label, status }: { label: string; status: 'live' | 'plann
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function HelpPage() {
+  const { profile } = useAuth()
+  const co = profile?.companies
+  const supportEmail = co?.support_email ?? co?.email ?? null
+  const supportPhone = co?.support_phone ?? co?.phone ?? null
+
   return (
     <div className="max-w-3xl space-y-10 animate-fade-in pb-12">
 
@@ -393,11 +399,38 @@ export default function HelpPage() {
       <Divider />
 
       {/* Footer */}
-      <div className="text-center space-y-1 py-4">
-        <p className="text-xs text-muted-foreground">
-          Questions during testing? Reach out to your system administrator.
+      <div className="bg-card border border-border rounded-xl p-5 space-y-3">
+        <p className="text-xs font-semibold text-foreground">
+          Need help? Contact your administrator
+          {co?.name ? ` at ${co.name}` : ''}.
         </p>
-        <p className="text-[11px] text-muted-foreground/60">
+        {(supportEmail || supportPhone) ? (
+          <div className="flex flex-wrap gap-4">
+            {supportEmail && (
+              <a
+                href={`mailto:${supportEmail}`}
+                className="flex items-center gap-1.5 text-sm text-primary hover:underline"
+              >
+                <Mail className="w-3.5 h-3.5" />
+                {supportEmail}
+              </a>
+            )}
+            {supportPhone && (
+              <a
+                href={`tel:${supportPhone}`}
+                className="flex items-center gap-1.5 text-sm text-primary hover:underline"
+              >
+                <Phone className="w-3.5 h-3.5" />
+                {supportPhone}
+              </a>
+            )}
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Reach out to your system administrator for access issues or questions.
+          </p>
+        )}
+        <p className="text-[11px] text-muted-foreground/60 pt-1 border-t border-border">
           Testing build — workflows and permissions may continue evolving.
         </p>
       </div>

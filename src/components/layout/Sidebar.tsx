@@ -74,8 +74,16 @@ export default function Sidebar() {
     <aside className="flex flex-col w-60 flex-shrink-0 bg-sidebar border-r border-sidebar-border">
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-4 py-5 border-b border-sidebar-border">
-        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
-          <Tent className="w-4 h-4 text-white" />
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden bg-primary">
+          {profile?.companies?.logo_url ? (
+            <img
+              src={profile.companies.logo_url}
+              alt={profile.companies.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <Tent className="w-4 h-4 text-white" />
+          )}
         </div>
         <div>
           <p className="text-sm font-semibold text-sidebar-foreground leading-none">RentalOps</p>

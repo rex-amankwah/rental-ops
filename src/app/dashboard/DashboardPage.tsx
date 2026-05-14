@@ -22,6 +22,8 @@ interface DashboardMetrics {
   upcomingDeliveries: number
   pendingPickups: number
   overdueReturns: number
+  overduePickups: number
+  disputedReturns: number
   recentOrders: (RentalOrder & { customer: Customer | null })[]
   overdueInvoices: Invoice[]
   lowInventoryItems: { name: string; available: number; owned: number }[]
@@ -58,6 +60,8 @@ function useDashboardMetrics() {
         upcomingEvents,
         pendingPickups,
         depositsResult,
+        overduePickupsResult,
+        disputedReturnsResult,
       ] = await Promise.all([
         // Today revenue
         supabase.from('payments').select('amount').eq('company_id', companyId)
@@ -107,6 +111,17 @@ function useDashboardMetrics() {
         // Deposits held
         supabase.from('payments').select('amount').eq('company_id', companyId)
           .eq('payment_type', 'security_deposit').eq('status', 'completed'),
+
+        // Overdue pickups: pickup_date passed but still in pickup_scheduled
+        supabase.from('rental_orders').select('id', { count: 'exact' })
+          .eq('company_id', companyId)
+          .eq('status', 'pickup_scheduled')
+          .lt('pickup_date', today),
+
+        // Disputed returns
+        supabase.from('returns').select('id', { count: 'exact' })
+          .eq('company_id', companyId)
+          .eq('status', 'disputed'),
       ])
 
       const sum = (items: { amount: number }[] | null) =>
@@ -126,7 +141,9 @@ function useDashboardMetrics() {
         activeRentals: activeOrders.count ?? 0,
         upcomingDeliveries: upcomingEvents.data?.length ?? 0,
         pendingPickups: pendingPickups.count ?? 0,
-        overdueReturns: 0, // Phase 2: compute from returns table
+        overdueReturns: 0,
+        overduePickups: overduePickupsResult.count ?? 0,
+        disputedReturns: disputedReturnsResult.count ?? 0,
         recentOrders: (recentOrders.data ?? []) as (RentalOrder & { customer: Customer | null })[],
         overdueInvoices: (overdueInvoices.data ?? []) as Invoice[],
         lowInventoryItems: (lowInventory.data ?? []).map((i: { name: string; quantity_available: number; quantity_owned: number }) => ({
@@ -388,8 +405,38 @@ export default function DashboardPage() {
                 </Link>
               )}
 
+              {/* Overdue pickups */}
+              {(metrics?.overduePickups ?? 0) > 0 && (
+                <Link to="/orders" className="alert alert-warning flex items-start gap-2 no-underline">
+                  <RotateCcw className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium">
+                      {metrics!.overduePickups} overdue pickup{metrics!.overduePickups !== 1 ? 's' : ''}
+                    </p>
+                    <p className="text-xs opacity-80">Pickup date passed — follow up</p>
+                  </div>
+                </Link>
+              )}
+
+              {/* Disputed returns */}
+              {(metrics?.disputedReturns ?? 0) > 0 && (
+                <Link to="/returns" className="alert alert-error flex items-start gap-2 no-underline">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium">
+                      {metrics!.disputedReturns} disputed return{metrics!.disputedReturns !== 1 ? 's' : ''}
+                    </p>
+                    <p className="text-xs opacity-80">Requires review and resolution</p>
+                  </div>
+                </Link>
+              )}
+
               {/* All clear */}
-              {(metrics?.overdueInvoices.length ?? 0) === 0 && (metrics?.lowInventoryItems.length ?? 0) === 0 && !loading && (
+              {(metrics?.overdueInvoices.length ?? 0) === 0 &&
+               (metrics?.lowInventoryItems.length ?? 0) === 0 &&
+               (metrics?.overduePickups ?? 0) === 0 &&
+               (metrics?.disputedReturns ?? 0) === 0 &&
+               !loading && (
                 <div className="bg-card rounded-lg border border-border p-3 flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                   <span className="text-xs text-muted-foreground">No active alerts</span>

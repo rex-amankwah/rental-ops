@@ -86,14 +86,25 @@ function Stat({ label, value, sub, warn }: {
   )
 }
 
-function Phase3({ title }: { title: string }) {
+function PlannedItem({ title }: { title: string }) {
   return (
     <div className="flex items-center justify-between bg-muted/20 border border-dashed border-border rounded-lg px-4 py-2.5">
       <span className="text-sm text-muted-foreground">{title}</span>
       <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 bg-muted px-2 py-0.5 rounded-full flex-shrink-0 ml-3">
-        Phase 3
+        Planned
       </span>
     </div>
+  )
+}
+
+function MomBadge({ thisMonth, lastMonth }: { thisMonth: number; lastMonth: number }) {
+  if (lastMonth === 0) return null
+  const pct = ((thisMonth - lastMonth) / lastMonth) * 100
+  const up = pct >= 0
+  return (
+    <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${up ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+      {up ? '+' : ''}{pct.toFixed(1)}% vs last month
+    </span>
   )
 }
 
@@ -335,7 +346,7 @@ export default function ReportsPage() {
 
   return (
     <PageShell>
-      <PageHeader title="Reports" subtitle="Live data · Phase 3 items coming soon" />
+      <PageHeader title="Reports" subtitle="Live data — planned exports noted where applicable" />
 
       {fetchError && (
         <div className="alert alert-error">
@@ -353,15 +364,18 @@ export default function ReportsPage() {
           {/* ── 1. Accounting ─────────────────────────────────────────────── */}
           <Section
             icon={<TrendingUp className="w-4 h-4" />}
-            title="Accounting Reports"
-            subtitle="Revenue, collections, expenses, and profit"
+            title="Accounting"
+            subtitle="Revenue, collections, expenses, and profit estimate"
           >
             <StatGrid>
-              <Stat
-                label="Revenue This Month"
-                value={formatCurrency(data.revenueThisMonth)}
-                sub={`Last month: ${formatCurrency(data.revenueLastMonth)}`}
-              />
+              <div className="bg-muted/40 rounded-lg px-4 py-3 space-y-1">
+                <p className="text-xs text-muted-foreground">Revenue This Month</p>
+                <p className="text-base font-semibold text-foreground">{formatCurrency(data.revenueThisMonth)}</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs text-muted-foreground">Last month: {formatCurrency(data.revenueLastMonth)}</span>
+                  <MomBadge thisMonth={data.revenueThisMonth} lastMonth={data.revenueLastMonth} />
+                </div>
+              </div>
               <Stat label="Total Collected (All Time)" value={formatCurrency(data.totalCollected)} />
               <Stat
                 label="Outstanding Receivables"
@@ -408,11 +422,11 @@ export default function ReportsPage() {
 
             {/* Phase 3 */}
             <div>
-              <SectionLabel>Coming in Phase 3</SectionLabel>
+              <SectionLabel>Planned Exports</SectionLabel>
               <div className="space-y-2">
-                <Phase3 title="Export All Payments to CSV" />
-                <Phase3 title="Export Expense Summary to CSV" />
-                <Phase3 title="Generate PDF Financial Report" />
+                <PlannedItem title="Export All Payments to CSV" />
+                <PlannedItem title="Export Expense Summary to CSV" />
+                <PlannedItem title="Generate PDF Financial Report" />
               </div>
             </div>
           </Section>
@@ -420,7 +434,7 @@ export default function ReportsPage() {
           {/* ── 2. Tax ────────────────────────────────────────────────────── */}
           <Section
             icon={<Receipt className="w-4 h-4" />}
-            title="Tax Reports"
+            title="Tax"
             subtitle="Tax collected on paid invoices"
           >
             <StatGrid cols={2}>
@@ -437,12 +451,12 @@ export default function ReportsPage() {
             </StatGrid>
 
             <div>
-              <SectionLabel>Coming in Phase 3</SectionLabel>
+              <SectionLabel>Planned Exports</SectionLabel>
               <div className="space-y-2">
-                <Phase3 title="Exempt / Non-Taxable Sales Breakdown" />
-                <Phase3 title="Quarterly Tax Summary" />
-                <Phase3 title="Year-End Tax Report" />
-                <Phase3 title="Export Tax Data to CSV" />
+                <PlannedItem title="Exempt / Non-Taxable Sales Breakdown" />
+                <PlannedItem title="Quarterly Tax Summary" />
+                <PlannedItem title="Year-End Tax Report" />
+                <PlannedItem title="Export Tax Data to CSV" />
               </div>
             </div>
           </Section>
@@ -450,8 +464,8 @@ export default function ReportsPage() {
           {/* ── 3. Management ─────────────────────────────────────────────── */}
           <Section
             icon={<Users className="w-4 h-4" />}
-            title="Management Reports"
-            subtitle="Performance, customers, inventory, and damage"
+            title="Management"
+            subtitle="Order performance, top customers, inventory, and damage"
           >
             <StatGrid>
               <Stat label="Total Orders" value={data.orderVolume} sub="Excl. cancelled / refunded" />
@@ -547,7 +561,7 @@ export default function ReportsPage() {
           {/* ── 4. Operations ─────────────────────────────────────────────── */}
           <Section
             icon={<Truck className="w-4 h-4" />}
-            title="Operations Reports"
+            title="Operations"
             subtitle="Upcoming deliveries, pickups, and open issues"
           >
             <StatGrid>

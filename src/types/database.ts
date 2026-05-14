@@ -56,6 +56,10 @@ export interface Company {
   active: boolean
   created_at: string
   updated_at: string
+  // Optional branding fields — added by migration 20260514_company_branding_fields.sql
+  primary_color?: string | null
+  support_email?: string | null
+  support_phone?: string | null
 }
 
 export interface Profile {
