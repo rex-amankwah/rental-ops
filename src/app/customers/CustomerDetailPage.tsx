@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   ArrowLeft, Mail, Phone, MapPin, Building2,
-  ClipboardList, DollarSign, Calendar, Users, Loader2
+  ClipboardList, DollarSign, Calendar, Users, Loader2, Pencil
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -118,6 +118,9 @@ export default function CustomerDetailPage() {
             </div>
           </div>
         </div>
+        <button onClick={() => navigate(`/customers/${customer.id}/edit`)} className="btn-secondary">
+          <Pencil className="w-3.5 h-3.5" /> Edit
+        </button>
       </div>
 
       {/* Summary cards */}

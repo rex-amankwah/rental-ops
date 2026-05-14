@@ -1,6 +1,6 @@
 import { ChangeEvent, useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Plus, Package, SlidersHorizontal, Tag, X } from 'lucide-react'
+import { Search, Plus, Package, SlidersHorizontal, Tag, X, Pencil } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { PageShell, PageHeader, TableCard, TableToolbar, StatCard } from '@/components/common/PageShell'
@@ -229,7 +229,15 @@ export default function InventoryPage() {
                 <h2 className="text-base font-semibold text-foreground">{selectedItem.name}</h2>
                 {selectedItem.sku && <p className="text-xs text-muted-foreground font-mono mt-0.5">{selectedItem.sku}</p>}
               </div>
-              <button onClick={() => setSelectedItem(null)} className="btn-ghost p-1.5 flex-shrink-0"><X className="w-4 h-4" /></button>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button
+                  onClick={() => { setSelectedItem(null); navigate(`/inventory/${selectedItem.id}/edit`) }}
+                  className="btn-secondary text-xs px-2.5 py-1.5 h-auto"
+                >
+                  <Pencil className="w-3 h-3" /> Edit
+                </button>
+                <button onClick={() => setSelectedItem(null)} className="btn-ghost p-1.5"><X className="w-4 h-4" /></button>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
               {[

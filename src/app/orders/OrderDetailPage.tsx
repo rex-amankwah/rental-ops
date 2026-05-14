@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, MapPin, Calendar, Package, FileText,
   CreditCard, Clock, User, Phone, Mail, AlertTriangle, Truck,
-  Loader2, CheckCircle2
+  Loader2, CheckCircle2, Pencil
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -196,6 +196,12 @@ export default function OrderDetailPage() {
           )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Edit order */}
+          {!['cancelled', 'refunded', 'closed', 'completed'].includes(order.status) && (
+            <button onClick={() => navigate(`/orders/${order.id}/edit`)} className="btn-secondary">
+              <Pencil className="w-3.5 h-3.5" /> Edit
+            </button>
+          )}
           {/* Reserve inventory */}
           {order.order_items?.length > 0 && ['confirmed','awaiting_deposit','quote_sent','inquiry'].includes(order.status) && (
             <button onClick={() => handleReserve(false)} disabled={reserving} className="btn-primary">

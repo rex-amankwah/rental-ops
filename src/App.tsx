@@ -7,11 +7,14 @@ import DashboardPage from '@/app/dashboard/DashboardPage'
 import OrdersPage from '@/app/orders/OrdersPage'
 import OrderDetailPage from '@/app/orders/OrderDetailPage'
 import NewOrderPage from '@/app/orders/NewOrderPage'
+import EditOrderPage from '@/app/orders/EditOrderPage'
 import CustomersPage from '@/app/customers/CustomersPage'
 import CustomerDetailPage from '@/app/customers/CustomerDetailPage'
 import NewCustomerPage from '@/app/customers/NewCustomerPage'
+import EditCustomerPage from '@/app/customers/EditCustomerPage'
 import InventoryPage from '@/app/inventory/InventoryPage'
 import NewInventoryPage from '@/app/inventory/NewInventoryPage'
+import EditInventoryPage from '@/app/inventory/EditInventoryPage'
 import InvoicesPage from '@/app/invoices/InvoicesPage'
 import InvoiceDetailPage from '@/app/invoices/InvoiceDetailPage'
 import PaymentsPage from '@/app/payments/PaymentsPage'
@@ -116,13 +119,16 @@ function AppRoutes() {
         <Route path="orders" element={<OrdersPage />} />
         <Route path="orders/new" element={<NewOrderPage />} />
         <Route path="orders/:id" element={<OrderDetailPage />} />
+        <Route path="orders/:id/edit" element={<EditOrderPage />} />
 
         <Route path="customers" element={<CustomersPage />} />
         <Route path="customers/new" element={<NewCustomerPage />} />
         <Route path="customers/:id" element={<CustomerDetailPage />} />
+        <Route path="customers/:id/edit" element={<EditCustomerPage />} />
 
         <Route path="inventory" element={<InventoryPage />} />
         <Route path="inventory/new" element={<NewInventoryPage />} />
+        <Route path="inventory/:id/edit" element={<EditInventoryPage />} />
 
         <Route path="invoices" element={<InvoicesPage />} />
         <Route path="invoices/:id" element={<InvoiceDetailPage />} />
