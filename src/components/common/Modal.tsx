@@ -1,4 +1,4 @@
-import { useEffect, useRef, ReactNode } from 'react'
+import { useEffect, ReactNode } from 'react'
 import { X } from 'lucide-react'
 
 interface ModalProps {
@@ -21,22 +21,6 @@ const SIZE_MAP = {
 }
 
 export default function Modal({ open, onClose, title, subtitle, children, footer, size = 'md', preventBackdropClose = false }: ModalProps) {
-  // When the window loses focus, the NEXT backdrop click is a re-focus click,
-  // not an intentional dismiss. Track blur so we can swallow that click.
-  const windowBlurredRef = useRef(false)
-
-  // Reset on every open so stale blur state never carries over.
-  useEffect(() => {
-    if (open) windowBlurredRef.current = false
-  }, [open])
-
-  useEffect(() => {
-    if (!open || preventBackdropClose) return
-    const onBlur = () => { windowBlurredRef.current = true }
-    window.addEventListener('blur', onBlur)
-    return () => window.removeEventListener('blur', onBlur)
-  }, [open, preventBackdropClose])
-
   // Close on Escape
   useEffect(() => {
     if (!open) return
@@ -56,13 +40,10 @@ export default function Modal({ open, onClose, title, subtitle, children, footer
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
+      {/* Backdrop — inert when preventBackdropClose is set */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={preventBackdropClose ? undefined : () => {
-          if (windowBlurredRef.current) { windowBlurredRef.current = false; return }
-          onClose()
-        }}
+        onClick={preventBackdropClose ? undefined : onClose}
       />
 
       {/* Panel */}
