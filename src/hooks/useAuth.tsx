@@ -51,10 +51,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // handling both the logged-in and logged-out cases without a separate getSession call.
     // This eliminates the double-fetch race condition.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
         setSession(session)
         if (session?.user) {
-          fetchProfile(session.user.id)
+          // TOKEN_REFRESHED and USER_UPDATED are silent background events — the user is
+          // already authenticated. Do NOT set loading=true for these or ProtectedRoute
+          // will unmount the entire page, destroying all modal and form state.
+          const silent = event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED'
+          fetchProfile(session.user.id, silent)
         } else {
           setProfile(null)
           setError(null)
@@ -69,11 +73,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  async function fetchProfile(userId: string) {
+  async function fetchProfile(userId: string, silent = false) {
     // Prevent concurrent fetches
     if (fetchingRef.current) return
     fetchingRef.current = true
-    setLoading(true)
+    // Silent refreshes (TOKEN_REFRESHED, USER_UPDATED) must not show the loading screen —
+    // that would unmount the entire page and destroy all open modal and form state.
+    if (!silent) setLoading(true)
     setError(null)
     startLoadingTimeout()
 
