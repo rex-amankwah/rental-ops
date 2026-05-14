@@ -118,6 +118,19 @@ export default function NewDispatchPage() {
     if (!form.order_id) { setError('Please select an order'); return }
     setSaving(true); setError(null)
     try {
+      // Prevent duplicate active dispatches for the same order
+      const { data: existing } = await supabase
+        .from('dispatches')
+        .select('id')
+        .eq('order_id', form.order_id)
+        .neq('status', 'cancelled')
+        .limit(1)
+      if (existing && existing.length > 0) {
+        setError('An active dispatch already exists for this order. Visit the Dispatch Board to manage it.')
+        setSaving(false)
+        return
+      }
+
       const { error: e } = await supabase.from('dispatches').insert({
         company_id:              profile.company_id,
         order_id:                form.order_id,

@@ -180,23 +180,26 @@ export default function OrdersPage() {
       align: 'right' as const,
       width: '120px',
       render: (row: OrderWithCustomer) => (
-        <div className="text-right whitespace-nowrap">
+        <div className="text-right whitespace-nowrap space-y-0.5">
           <p className="text-sm font-medium text-foreground">{formatCurrency(row.total_amount)}</p>
+          {(row.amount_paid ?? 0) > 0 && (
+            <p className="text-xs text-emerald-600">Paid {formatCurrency(row.amount_paid)}</p>
+          )}
           {row.balance_due > 0 && (
-            <p className="text-xs text-red-600">Due: {formatCurrency(row.balance_due)}</p>
+            <p className="text-xs text-red-600">Due {formatCurrency(row.balance_due)}</p>
           )}
         </div>
       ),
     },
     {
       key: 'status',
-      label: 'Status',
+      label: 'Order Status',
       width: '130px',
       render: (row: OrderWithCustomer) => <StatusBadge type="order" status={row.status} />,
     },
     {
       key: 'dispatch_action',
-      label: 'Dispatch',
+      label: 'Dispatch Status',
       width: '140px',
       render: (row: OrderWithCustomer) => {
         // Never show dispatch state for terminal orders

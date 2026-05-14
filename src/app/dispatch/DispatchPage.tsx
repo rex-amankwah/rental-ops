@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, MouseEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Loader2, Calendar, MapPin, User, Clock } from 'lucide-react'
+import { Plus, Loader2, Calendar, MapPin, User, Clock, Settings } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import Modal from '@/components/common/Modal'
@@ -16,6 +16,24 @@ const COLUMNS: DispatchStatus[] = [
   'scheduled', 'loading', 'out_for_delivery', 'delivered',
   'setup_done', 'pickup_pending', 'returned'
 ]
+
+const DEFAULT_ENABLED = new Set<DispatchStatus>([
+  'scheduled', 'loading', 'out_for_delivery', 'delivered', 'setup_done', 'pickup_pending'
+])
+
+const STAGE_STORAGE_KEY = 'rental_ops_dispatch_stages'
+
+function loadEnabledStages(): Set<DispatchStatus> {
+  try {
+    const raw = localStorage.getItem(STAGE_STORAGE_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw) as string[]
+      const valid = parsed.filter((s): s is DispatchStatus => (COLUMNS as string[]).includes(s))
+      if (valid.length > 0) return new Set(valid)
+    }
+  } catch {}
+  return new Set(DEFAULT_ENABLED)
+}
 
 const NEXT_STATUS: Partial<Record<DispatchStatus, DispatchStatus>> = {
   scheduled:        'loading',
@@ -162,6 +180,22 @@ export default function DispatchPage() {
   const [dispatches, setDispatches] = useState<DispatchWithOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedDispatch, setSelectedDispatch] = useState<DispatchWithOrder | null>(null)
+  const [enabledStages, setEnabledStages] = useState<Set<DispatchStatus>>(loadEnabledStages)
+  const [showConfig, setShowConfig] = useState(false)
+
+  function toggleStage(stage: DispatchStatus) {
+    setEnabledStages(prev => {
+      const next = new Set(prev)
+      if (next.has(stage)) {
+        if (next.size <= 1) return prev
+        next.delete(stage)
+      } else {
+        next.add(stage)
+      }
+      try { localStorage.setItem(STAGE_STORAGE_KEY, JSON.stringify([...next])) } catch {}
+      return next
+    })
+  }
 
   const load = useCallback(async () => {
     if (!profile?.company_id) return
@@ -236,16 +270,57 @@ export default function DispatchPage() {
           <h2 className="page-title">Dispatch Board</h2>
           <p className="page-subtitle">{dispatches.length} active dispatch{dispatches.length !== 1 ? 'es' : ''}</p>
         </div>
-        <button onClick={() => navigate('/dispatch/new')} className="btn-primary">
-          <Plus className="w-4 h-4" />
-          New Dispatch
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowConfig(v => !v)}
+            className={`btn-ghost p-2 ${showConfig ? 'text-primary' : ''}`}
+            title="Configure visible stages"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+          <button onClick={() => navigate('/dispatch/new')} className="btn-primary">
+            <Plus className="w-4 h-4" />
+            New Dispatch
+          </button>
+        </div>
       </div>
+
+      {/* Stage configuration panel */}
+      {showConfig && (
+        <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Visible Stages
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {COLUMNS.map(stage => {
+              const cfg = DISPATCH_STATUS_CONFIG[stage]
+              const on = enabledStages.has(stage)
+              return (
+                <label key={stage} className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    onChange={() => toggleStage(stage)}
+                    className="rounded accent-primary"
+                  />
+                  <span className={`badge text-xs ${cfg.bg} ${cfg.color} ${!on ? 'opacity-40' : ''}`}>
+                    {cfg.label}
+                  </span>
+                </label>
+              )
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            This is a display-only setting. No records are changed. Dispatches in hidden stages appear in an
+            <strong> Other Stages</strong> column at the end of the board so nothing is ever silently lost.
+          </p>
+        </div>
+      )}
 
       {/* Kanban */}
       <div className="overflow-x-auto pb-4">
         <div className="flex gap-4 min-w-max">
-          {COLUMNS.map(col => {
+          {COLUMNS.filter(col => enabledStages.has(col)).map(col => {
             const cards = byStatus(col)
             const cfg = DISPATCH_STATUS_CONFIG[col]
             return (
@@ -280,6 +355,39 @@ export default function DispatchPage() {
               </div>
             )
           })}
+
+          {/* Fallback column: dispatches whose status is in a hidden stage */}
+          {(() => {
+            const hidden = dispatches.filter(d => !enabledStages.has(d.status as DispatchStatus))
+            if (hidden.length === 0) return null
+            return (
+              <div className="w-64 flex-shrink-0">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-muted-foreground/40" />
+                    <span className="text-xs font-semibold text-muted-foreground">Other Stages</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+                    {hidden.length}
+                  </span>
+                </div>
+                <div className="space-y-2 min-h-[100px]">
+                  {hidden.map(d => (
+                    <div key={d.id}>
+                      <DispatchCard
+                        dispatch={d}
+                        onAdvance={advanceStatus}
+                        onOpen={(dispatch: DispatchWithOrder) => setSelectedDispatch(dispatch)}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground text-center mt-2 px-1">
+                  In a hidden stage — re-enable via <Settings className="inline w-3 h-3 mx-0.5" /> to show in context
+                </p>
+              </div>
+            )
+          })()}
         </div>
       </div>
 
