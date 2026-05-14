@@ -1,6 +1,5 @@
-import { ChangeEvent } from 'react'
-import { useEffect, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { ChangeEvent, useEffect, useState, useCallback } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
 import { Search, Plus, FileText, SlidersHorizontal } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -199,10 +198,10 @@ export default function InvoicesPage() {
         title="Invoices"
         subtitle={`${total} total invoice${total !== 1 ? 's' : ''}`}
         actions={
-          <button onClick={() => navigate('/invoices/new')} className="btn-primary">
+          <Link to="/orders" className="btn-primary">
             <Plus className="w-4 h-4" />
-            New Invoice
-          </button>
+            Go to Orders
+          </Link>
         }
       />
 
@@ -308,12 +307,12 @@ export default function InvoicesPage() {
           </div>
           <h3 className="text-base font-medium text-foreground mb-1">No invoices yet</h3>
           <p className="text-sm text-muted-foreground mb-4 max-w-xs">
-            Create invoices from rental orders to bill customers for deposits and final payments.
+            Open an order and click "Generate Invoice" to create your first invoice.
           </p>
-          <button onClick={() => navigate('/invoices/new')} className="btn-primary">
+          <Link to="/orders" className="btn-primary">
             <Plus className="w-4 h-4" />
-            Create First Invoice
-          </button>
+            Go to Orders
+          </Link>
         </div>
       )}
     </PageShell>

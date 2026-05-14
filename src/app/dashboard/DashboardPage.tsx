@@ -405,21 +405,38 @@ export default function DashboardPage() {
               Quick Actions
             </h3>
             <div className="grid grid-cols-2 gap-2">
-              {[
-                { label: 'New Order', to: '/orders/new', icon: FileText },
-                { label: 'New Customer', to: '/customers/new', icon: Users },
-                { label: 'New Invoice', to: '/invoices/new', icon: FileText },
-                { label: 'Record Payment', to: '/payments/new', icon: DollarSign },
-              ].map(({ label, to, icon: Icon }) => (
-                <Link
-                  key={label}
-                  to={to}
-                  className="flex items-center gap-2 p-2.5 bg-card rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition-colors text-xs font-medium text-foreground"
-                >
-                  <Icon className="w-3.5 h-3.5 text-primary" />
-                  {label}
-                </Link>
-              ))}
+              {/* New Order - real route */}
+              <Link
+                to="/orders/new"
+                className="flex items-center gap-2 p-2.5 bg-card rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition-colors text-xs font-medium text-foreground"
+              >
+                <FileText className="w-3.5 h-3.5 text-primary" />
+                New Order
+              </Link>
+              {/* New Customer - go to customers page where modal lives */}
+              <Link
+                to="/customers"
+                className="flex items-center gap-2 p-2.5 bg-card rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition-colors text-xs font-medium text-foreground"
+              >
+                <Users className="w-3.5 h-3.5 text-primary" />
+                New Customer
+              </Link>
+              {/* Invoices - generated from order detail */}
+              <Link
+                to="/invoices"
+                className="flex items-center gap-2 p-2.5 bg-card rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition-colors text-xs font-medium text-foreground"
+              >
+                <FileText className="w-3.5 h-3.5 text-primary" />
+                View Invoices
+              </Link>
+              {/* Payments - recorded from invoice detail */}
+              <Link
+                to="/payments"
+                className="flex items-center gap-2 p-2.5 bg-card rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition-colors text-xs font-medium text-foreground"
+              >
+                <DollarSign className="w-3.5 h-3.5 text-primary" />
+                View Payments
+              </Link>
             </div>
           </div>
         </div>

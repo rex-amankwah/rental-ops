@@ -1,6 +1,4 @@
-import { ChangeEvent } from 'react'
-import { useEffect, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { ChangeEvent, useEffect, useState, useCallback } from 'react'
 import { Search, Plus, CreditCard, SlidersHorizontal, TrendingUp, DollarSign, RotateCcw } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -33,7 +31,6 @@ const TYPE_TABS = [
 
 export default function PaymentsPage() {
   const { profile } = useAuth()
-  const navigate = useNavigate()
   const [payments, setPayments] = useState<PaymentWithJoins[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -229,10 +226,15 @@ export default function PaymentsPage() {
         title="Payments"
         subtitle={`${total} payment record${total !== 1 ? 's' : ''}`}
         actions={
-          <button onClick={() => navigate('/payments/new')} className="btn-primary">
-            <Plus className="w-4 h-4" />
-            Record Payment
-          </button>
+          <div className="relative group">
+            <button disabled className="btn-primary opacity-50 cursor-not-allowed">
+              <Plus className="w-4 h-4" />
+              Record Payment
+            </button>
+            <div className="absolute right-0 top-10 hidden group-hover:block z-10 w-60 bg-foreground text-background text-xs rounded-lg px-3 py-2 shadow-lg">
+              Record payments from an invoice's detail page.
+            </div>
+          </div>
         }
       />
 
@@ -337,10 +339,9 @@ export default function PaymentsPage() {
           <p className="text-sm text-muted-foreground mb-4 max-w-xs">
             Record deposits, partial payments, and final collections here.
           </p>
-          <button onClick={() => navigate('/payments/new')} className="btn-primary">
-            <Plus className="w-4 h-4" />
-            Record First Payment
-          </button>
+          <p className="text-xs text-muted-foreground mt-2">
+            Record payments from an invoice's detail page.
+          </p>
         </div>
       )}
     </PageShell>

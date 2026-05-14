@@ -27,14 +27,18 @@ export default function OrderDetailPage() {
   const { reserveItems, releaseReservations } = useAvailability()
   const [order, setOrder] = useState<FullOrder | null>(null)
   const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
   const [activeTab, setActiveTab] = useState<'details' | 'items' | 'invoices' | 'payments' | 'activity'>('details')
   const [reserving, setReserving] = useState(false)
   const [invoicing, setInvoicing] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [fetchError, setFetchError] = useState<string | null>(null)
 
   const fetchOrder = useCallback(async () => {
     if (!id || !profile?.company_id) return
     setLoading(true)
+    setNotFound(false)
+    setFetchError(null)
     try {
       const { data, error } = await supabase
         .from('rental_orders')
@@ -47,17 +51,25 @@ export default function OrderDetailPage() {
           activity_logs(*)
         `)
         .eq('id', id)
-        .eq('company_id', profile.company_id)
         .single()
 
-      if (error) throw error
+      if (error) {
+        if (error.code === 'PGRST116' || error.message?.includes('0 rows')) {
+          setNotFound(true)
+        } else {
+          console.error('[OrderDetailPage] fetch error:', error)
+          setFetchError(`${error.message} (${error.code})`)
+        }
+        return
+      }
       setOrder(data as unknown as FullOrder)
-    } catch {
-      navigate('/orders')
+    } catch (err) {
+      console.error('[OrderDetailPage] unexpected error:', err)
+      setFetchError(err instanceof Error ? err.message : String(err))
     } finally {
       setLoading(false)
     }
-  }, [id, profile?.company_id, navigate])
+  }, [id, profile?.company_id])
 
   useEffect(() => { fetchOrder() }, [fetchOrder])
 
@@ -111,7 +123,39 @@ export default function OrderDetailPage() {
     )
   }
 
-  if (!order) return null
+  if (fetchError) {
+    return (
+      <div className="empty-state">
+        <div className="empty-state-icon">
+          <AlertTriangle className="w-7 h-7 text-red-500" />
+        </div>
+        <h2 className="text-lg font-semibold text-foreground mb-2">Failed to load order</h2>
+        <p className="text-sm text-red-600 mb-2 font-mono max-w-sm break-all">{fetchError}</p>
+        <p className="text-xs text-muted-foreground mb-6">Check the browser console for details.</p>
+        <div className="flex gap-3">
+          <button onClick={() => fetchOrder()} className="btn-primary">Retry</button>
+          <button onClick={() => navigate('/orders')} className="btn-secondary">Back to Orders</button>
+        </div>
+      </div>
+    )
+  }
+
+  if (notFound || !order) {
+    return (
+      <div className="empty-state">
+        <div className="empty-state-icon">
+          <Package className="w-7 h-7 text-muted-foreground" />
+        </div>
+        <h2 className="text-lg font-semibold text-foreground mb-2">Order not found</h2>
+        <p className="text-sm text-muted-foreground mb-6 max-w-xs">
+          This order doesn't exist or you don't have access to it.
+        </p>
+        <button onClick={() => navigate('/orders')} className="btn-primary">
+          Back to Orders
+        </button>
+      </div>
+    )
+  }
 
   const customer = order.customer as unknown as Customer | null
 
@@ -384,28 +428,22 @@ export default function OrderDetailPage() {
                   ))}
                 </dl>
               </div>
-              {(order.internal_notes || order.customer_notes) && (
-                <div className="md:col-span-2 space-y-2">
-                  {order.internal_notes && (
-                    <div className="alert alert-info">
-                      <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                      <div>
-                        <p className="font-medium text-xs">Internal Notes</p>
-                        <p className="text-xs mt-0.5">{order.internal_notes}</p>
-                      </div>
-                    </div>
-                  )}
-                  {order.customer_notes && (
-                    <div className="alert alert-info">
-                      <User className="w-4 h-4 flex-shrink-0" />
-                      <div>
-                        <p className="font-medium text-xs">Customer Notes</p>
-                        <p className="text-xs mt-0.5">{order.customer_notes}</p>
-                      </div>
-                    </div>
-                  )}
+              <div className="md:col-span-2 space-y-2">
+                <div className="alert alert-info">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium text-xs">Internal Notes</p>
+                    <p className="text-xs mt-0.5">{order.internal_notes || <span className="italic text-muted-foreground">None</span>}</p>
+                  </div>
                 </div>
-              )}
+                <div className="alert alert-info">
+                  <User className="w-4 h-4 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium text-xs">Customer Notes</p>
+                    <p className="text-xs mt-0.5">{order.customer_notes || <span className="italic text-muted-foreground">None</span>}</p>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 

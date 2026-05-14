@@ -8,6 +8,7 @@ import OrdersPage from '@/app/orders/OrdersPage'
 import OrderDetailPage from '@/app/orders/OrderDetailPage'
 import NewOrderPage from '@/app/orders/NewOrderPage'
 import CustomersPage from '@/app/customers/CustomersPage'
+import CustomerDetailPage from '@/app/customers/CustomerDetailPage'
 import InventoryPage from '@/app/inventory/InventoryPage'
 import InvoicesPage from '@/app/invoices/InvoicesPage'
 import InvoiceDetailPage from '@/app/invoices/InvoiceDetailPage'
@@ -106,6 +107,7 @@ function AppRoutes() {
         <Route path="orders/:id" element={<OrderDetailPage />} />
 
         <Route path="customers" element={<CustomersPage />} />
+        <Route path="customers/:id" element={<CustomerDetailPage />} />
         <Route path="inventory" element={<InventoryPage />} />
 
         <Route path="invoices" element={<InvoicesPage />} />

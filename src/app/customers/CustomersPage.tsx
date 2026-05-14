@@ -9,6 +9,14 @@ import Modal from '@/components/common/Modal'
 import { formatCurrency, formatDate } from '@/lib/constants'
 import type { Customer } from '@/types/database'
 
+const US_STATES = [
+  'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA',
+  'HI','ID','IL','IN','IA','KS','KY','LA','ME','MD',
+  'MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
+  'NM','NY','NC','ND','OH','OK','OR','PA','RI','SC',
+  'SD','TN','TX','UT','VT','VA','WA','WV','WI','WY',
+]
+
 // ─── New Customer Modal ───────────────────────────────────────────────────────
 
 interface NewCustomerForm {
@@ -231,14 +239,16 @@ function NewCustomerModal({ open, onClose, onSaved }: NewCustomerModalProps) {
           </div>
           <div className="space-y-1.5">
             <label className="form-label">State</label>
-            <input
-              type="text"
+            <select
               value={form.billing_state}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => set('billing_state', e.target.value)}
-              placeholder="TX"
-              maxLength={2}
-              className="form-input"
-            />
+              onChange={(e: ChangeEvent<HTMLSelectElement>) => set('billing_state', e.target.value)}
+              className="form-select"
+            >
+              <option value="">— Select —</option>
+              {US_STATES.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
           </div>
         </div>
       </div>

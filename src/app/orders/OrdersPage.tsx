@@ -1,12 +1,11 @@
-import { ChangeEvent } from 'react'
-import { useEffect, useState, useCallback } from 'react'
+import { ChangeEvent, useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, SlidersHorizontal, Plus, ClipboardList } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { PageShell, PageHeader, TableCard, TableToolbar } from '@/components/common/PageShell'
 import { DataTable } from '@/components/common/DataTable'
-import { StatusBadge, PriorityBadge } from '@/components/common/StatusBadge'
+import { StatusBadge } from '@/components/common/StatusBadge'
 import { formatCurrency, formatDate, ORDER_STATUS_CONFIG } from '@/lib/constants'
 import type { RentalOrder, Customer, OrderStatus } from '@/types/database'
 
@@ -105,21 +104,24 @@ export default function OrdersPage() {
       key: 'order_number',
       label: 'Order #',
       sortable: true,
-      width: '120px',
+      width: '110px',
       render: (row: OrderWithCustomer) => (
-        <span className="font-mono text-xs font-semibold text-foreground">{row.order_number}</span>
+        <span className="font-mono text-xs font-semibold text-foreground whitespace-nowrap">{row.order_number}</span>
       ),
     },
     {
       key: 'customer',
       label: 'Customer',
+      width: '160px',
       render: (row: OrderWithCustomer) => {
         const c = row.customer as unknown as { first_name: string; last_name: string; company_name?: string } | null
         if (!c) return <span className="text-muted-foreground text-xs">No customer</span>
         return (
-          <div>
-            <p className="text-sm font-medium text-foreground">{c.first_name} {c.last_name}</p>
-            {c.company_name && <p className="text-xs text-muted-foreground">{c.company_name}</p>}
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-foreground truncate max-w-[140px]">{c.first_name} {c.last_name}</p>
+            {c.company_name && (
+              <p className="text-xs text-muted-foreground truncate max-w-[140px]">{c.company_name}</p>
+            )}
           </div>
         )
       },
@@ -127,10 +129,13 @@ export default function OrdersPage() {
     {
       key: 'event_name',
       label: 'Event',
+      width: '160px',
       render: (row: OrderWithCustomer) => (
-        <div>
-          <p className="text-sm text-foreground">{row.event_name || '—'}</p>
-          {row.event_type && <p className="text-xs text-muted-foreground capitalize">{row.event_type}</p>}
+        <div className="min-w-0">
+          <p className="text-sm text-foreground truncate max-w-[140px]">{row.event_name || '—'}</p>
+          {row.event_type && (
+            <p className="text-xs text-muted-foreground capitalize">{row.event_type}</p>
+          )}
         </div>
       ),
     },
@@ -138,8 +143,9 @@ export default function OrdersPage() {
       key: 'event_date',
       label: 'Event Date',
       sortable: true,
+      width: '110px',
       render: (row: OrderWithCustomer) => (
-        <span className="text-sm text-muted-foreground">{formatDate(row.event_date)}</span>
+        <span className="text-sm text-muted-foreground whitespace-nowrap">{formatDate(row.event_date)}</span>
       ),
     },
     {
@@ -147,11 +153,12 @@ export default function OrdersPage() {
       label: 'Total',
       sortable: true,
       align: 'right' as const,
+      width: '120px',
       render: (row: OrderWithCustomer) => (
-        <div className="text-right">
+        <div className="text-right whitespace-nowrap">
           <p className="text-sm font-medium text-foreground">{formatCurrency(row.total_amount)}</p>
           {row.balance_due > 0 && (
-            <p className="text-xs text-red-600">Balance: {formatCurrency(row.balance_due)}</p>
+            <p className="text-xs text-red-600">Due: {formatCurrency(row.balance_due)}</p>
           )}
         </div>
       ),
@@ -159,20 +166,8 @@ export default function OrdersPage() {
     {
       key: 'status',
       label: 'Status',
+      width: '130px',
       render: (row: OrderWithCustomer) => <StatusBadge type="order" status={row.status} />,
-    },
-    {
-      key: 'priority',
-      label: 'Priority',
-      render: (row: OrderWithCustomer) => row.priority !== 'normal' ? <PriorityBadge priority={row.priority} /> : null,
-    },
-    {
-      key: 'created_at',
-      label: 'Created',
-      sortable: true,
-      render: (row: OrderWithCustomer) => (
-        <span className="text-xs text-muted-foreground">{formatDate(row.created_at)}</span>
-      ),
     },
   ]
 
