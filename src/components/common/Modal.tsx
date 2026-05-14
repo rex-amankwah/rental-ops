@@ -21,19 +21,20 @@ const SIZE_MAP = {
 }
 
 export default function Modal({ open, onClose, title, subtitle, children, footer, size = 'md', preventBackdropClose = false }: ModalProps) {
-  // Track window re-focus so a click that merely restores browser focus
-  // doesn't accidentally dismiss the modal.
-  const justFocusedRef = useRef(false)
+  // When the window loses focus, the NEXT backdrop click is a re-focus click,
+  // not an intentional dismiss. Track blur so we can swallow that click.
+  const windowBlurredRef = useRef(false)
+
+  // Reset on every open so stale blur state never carries over.
+  useEffect(() => {
+    if (open) windowBlurredRef.current = false
+  }, [open])
+
   useEffect(() => {
     if (!open || preventBackdropClose) return
-    let timer: ReturnType<typeof setTimeout>
-    const onWindowFocus = () => {
-      justFocusedRef.current = true
-      clearTimeout(timer)
-      timer = setTimeout(() => { justFocusedRef.current = false }, 300)
-    }
-    window.addEventListener('focus', onWindowFocus)
-    return () => { window.removeEventListener('focus', onWindowFocus); clearTimeout(timer) }
+    const onBlur = () => { windowBlurredRef.current = true }
+    window.addEventListener('blur', onBlur)
+    return () => window.removeEventListener('blur', onBlur)
   }, [open, preventBackdropClose])
 
   // Close on Escape
@@ -58,7 +59,10 @@ export default function Modal({ open, onClose, title, subtitle, children, footer
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={preventBackdropClose ? undefined : () => { if (!justFocusedRef.current) onClose() }}
+        onClick={preventBackdropClose ? undefined : () => {
+          if (windowBlurredRef.current) { windowBlurredRef.current = false; return }
+          onClose()
+        }}
       />
 
       {/* Panel */}

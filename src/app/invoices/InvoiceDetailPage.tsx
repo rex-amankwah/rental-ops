@@ -32,8 +32,8 @@ function RecordPaymentModal({
   const { profile } = useAuth()
   const [form, setForm] = useState({
     amount: String(invoice.balance_due > 0 ? invoice.balance_due : invoice.total),
-    method: 'cash',
-    payment_type: 'payment',
+    method: 'cash' as string,
+    payment_type: 'payment' as string,
     reference: '',
     notes: '',
     payment_date: new Date().toISOString().split('T')[0],
@@ -41,10 +41,41 @@ function RecordPaymentModal({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Reset form to clean state each time the modal opens.
+  useEffect(() => {
+    if (!open) return
+    setForm({
+      amount: String(invoice.balance_due > 0 ? invoice.balance_due : invoice.total),
+      method: 'cash',
+      payment_type: invoice.balance_due > 0 ? 'payment' : 'deposit',
+      reference: '',
+      notes: '',
+      payment_date: new Date().toISOString().split('T')[0],
+    })
+    setError(null)
+  }, [open, invoice.balance_due, invoice.total])
+
+  // Auto-set payment type based on amount vs balance for standard payment types.
+  useEffect(() => {
+    if (!['payment', 'partial_payment'].includes(form.payment_type)) return
+    const amt = parseFloat(form.amount)
+    if (isNaN(amt) || amt <= 0) return
+    const derived = amt >= invoice.balance_due ? 'payment' : 'partial_payment'
+    if (derived !== form.payment_type) setForm(p => ({ ...p, payment_type: derived }))
+  }, [form.amount, invoice.balance_due]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const parsedAmount = parseFloat(form.amount) || 0
+  const isOverpayment = parsedAmount > invoice.balance_due && invoice.balance_due > 0
+  const isStandardType = ['payment', 'partial_payment'].includes(form.payment_type)
+
   async function save() {
     if (!profile?.company_id) return
     const amount = parseFloat(form.amount)
     if (!amount || amount <= 0) { setError('Amount must be greater than 0'); return }
+    if (isOverpayment && isStandardType) {
+      setError(`Amount ${formatCurrency(amount)} exceeds the balance due of ${formatCurrency(invoice.balance_due)}. Reduce the amount, or change the type to Deposit if recording a pre-payment.`)
+      return
+    }
     setSaving(true)
     setError(null)
     try {
@@ -64,11 +95,11 @@ function RecordPaymentModal({
       })
       if (e) throw e
 
-      // Update invoice totals (in case no DB trigger exists)
+      // Update invoice totals (guards against missing DB trigger).
       if (form.payment_type !== 'refund') {
         const newPaid = invoice.amount_paid + amount
         const newBalance = Math.max(0, invoice.total - newPaid)
-        const newStatus = newBalance <= 0 ? 'paid' : invoice.amount_paid > 0 ? 'partial' : invoice.status
+        const newStatus = newBalance <= 0 ? 'paid' : newPaid > 0 ? 'partial' : invoice.status
         await supabase.from('invoices').update({
           amount_paid: newPaid,
           balance_due: newBalance,
@@ -80,8 +111,7 @@ function RecordPaymentModal({
       onSuccess()
       onClose()
     } catch (err: unknown) {
-      const msg = (err as { message?: string }).message ?? String(err)
-      setError(msg)
+      setError((err as { message?: string }).message ?? String(err))
     } finally {
       setSaving(false)
     }
@@ -93,11 +123,11 @@ function RecordPaymentModal({
       onClose={onClose}
       preventBackdropClose
       title="Record Payment"
-      subtitle={`Invoice ${invoice.invoice_number} · Balance: ${formatCurrency(invoice.balance_due)}`}
+      subtitle={`Invoice ${invoice.invoice_number}`}
       footer={
         <>
           <button onClick={onClose} className="btn-secondary" disabled={saving}>Cancel</button>
-          <button onClick={save} className="btn-primary" disabled={saving}>
+          <button onClick={save} className="btn-primary" disabled={saving || (isOverpayment && isStandardType)}>
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
             Record Payment
           </button>
@@ -105,37 +135,83 @@ function RecordPaymentModal({
       }
     >
       <div className="space-y-4">
-        {error && <div className="alert alert-error"><AlertTriangle className="w-4 h-4" /><span>{error}</span></div>}
-        <div className="grid grid-cols-2 gap-4">
-          <InputField
-            label="Amount" required type="number" min="0.01" step="0.01"
+        {error && (
+          <div className="alert alert-error">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" /><span>{error}</span>
+          </div>
+        )}
+
+        {/* Read-only invoice balance summary */}
+        <div className="bg-muted/50 rounded-lg px-4 py-3 space-y-1.5 text-sm border border-border">
+          <div className="flex justify-between text-muted-foreground">
+            <span>Invoice Total</span>
+            <span className="font-medium text-foreground">{formatCurrency(invoice.total)}</span>
+          </div>
+          {invoice.amount_paid > 0 && (
+            <div className="flex justify-between text-muted-foreground">
+              <span>Already Paid</span>
+              <span className="font-medium text-emerald-600">{formatCurrency(invoice.amount_paid)}</span>
+            </div>
+          )}
+          <div className="flex justify-between font-semibold border-t border-border pt-1.5 mt-0.5">
+            <span>Balance Due</span>
+            <span className={invoice.balance_due > 0 ? 'text-red-600' : 'text-emerald-600'}>
+              {formatCurrency(invoice.balance_due)}
+            </span>
+          </div>
+        </div>
+
+        {/* Overpayment warning */}
+        {isOverpayment && isStandardType && (
+          <div className="alert alert-warning">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            <span>
+              Amount exceeds the balance due by {formatCurrency(parsedAmount - invoice.balance_due)}.
+              Change type to <strong>Deposit</strong> if this is a pre-payment.
+            </span>
+          </div>
+        )}
+
+        {/* Amount */}
+        <div className="space-y-1.5">
+          <label className="form-label">Amount Being Paid Now <span className="text-red-500">*</span></label>
+          <input
+            type="number" min="0.01" step="0.01" required
             value={form.amount}
             onChange={(e: ChangeEvent<HTMLInputElement>) => setForm(p => ({ ...p, amount: e.target.value }))}
+            className={`form-input ${isOverpayment && isStandardType ? 'border-amber-400 focus:ring-amber-400' : ''}`}
+            placeholder="0.00"
           />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
           <InputField
             label="Date" required type="date"
             value={form.payment_date}
             onChange={(e: ChangeEvent<HTMLInputElement>) => setForm(p => ({ ...p, payment_date: e.target.value }))}
           />
+          {/* Payment type — auto-set, but user can override */}
           <SelectField
-            label="Type"
+            label="Payment Type"
             value={form.payment_type}
             onChange={(e: ChangeEvent<HTMLSelectElement>) => setForm(p => ({ ...p, payment_type: e.target.value }))}
           >
-            <option value="deposit">Deposit</option>
             <option value="payment">Full Payment</option>
             <option value="partial_payment">Partial Payment</option>
+            <option value="deposit">Deposit / Pre-payment</option>
             <option value="security_deposit">Security Deposit</option>
             <option value="refund">Refund</option>
           </SelectField>
-          <SelectField
-            label="Method"
-            value={form.method}
-            onChange={(e: ChangeEvent<HTMLSelectElement>) => setForm(p => ({ ...p, method: e.target.value }))}
-          >
-            {PAYMENT_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-          </SelectField>
         </div>
+
+        <SelectField
+          label="Method"
+          value={form.method}
+          onChange={(e: ChangeEvent<HTMLSelectElement>) => setForm(p => ({ ...p, method: e.target.value }))}
+        >
+          {PAYMENT_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+        </SelectField>
+
         <InputField
           label="Reference / Check #"
           placeholder="Optional — check number, transaction ID…"
