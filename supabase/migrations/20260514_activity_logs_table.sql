@@ -31,6 +31,9 @@ create index if not exists activity_logs_order_id_idx
 -- RLS: company members can read their own logs; service role writes
 alter table public.activity_logs enable row level security;
 
+drop policy if exists "Company members can view their logs"
+  on public.activity_logs;
+
 create policy "Company members can view their logs"
   on public.activity_logs for select
   using (
@@ -38,6 +41,9 @@ create policy "Company members can view their logs"
       select company_id from public.profiles where id = auth.uid()
     )
   );
+
+drop policy if exists "Company members can insert logs"
+  on public.activity_logs;
 
 create policy "Company members can insert logs"
   on public.activity_logs for insert
