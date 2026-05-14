@@ -181,6 +181,32 @@
   }
 }
 
+/* ── Print styles ────────────────────────────────────────────── */
+@media print {
+  @page { margin: 1.5cm; size: A4; }
+
+  aside,
+  header,
+  .no-print,
+  [data-no-print] { display: none !important; }
+
+  body { background: white !important; }
+  main { overflow: visible !important; padding: 0 !important; background: white !important; }
+  .max-w-screen-2xl { max-width: 100% !important; }
+  .max-w-3xl,
+  .max-w-2xl { max-width: 100% !important; margin: 0 !important; }
+
+  .bg-card { box-shadow: none !important; }
+  .data-table th,
+  .data-table td { border-color: #d1d5db !important; }
+  .data-table tr { page-break-inside: avoid; }
+
+  /* Hide modal overlays */
+  .fixed { display: none !important; }
+
+  .print-only { display: block !important; }
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;

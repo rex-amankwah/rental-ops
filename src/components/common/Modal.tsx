@@ -1,4 +1,4 @@
-import { useEffect, ReactNode } from 'react'
+import { useEffect, useRef, ReactNode } from 'react'
 import { X } from 'lucide-react'
 
 interface ModalProps {
@@ -9,6 +9,7 @@ interface ModalProps {
   children: ReactNode
   footer?: ReactNode
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'
+  preventBackdropClose?: boolean
 }
 
 const SIZE_MAP = {
@@ -19,7 +20,22 @@ const SIZE_MAP = {
   '2xl': 'max-w-2xl',
 }
 
-export default function Modal({ open, onClose, title, subtitle, children, footer, size = 'md' }: ModalProps) {
+export default function Modal({ open, onClose, title, subtitle, children, footer, size = 'md', preventBackdropClose = false }: ModalProps) {
+  // Track window re-focus so a click that merely restores browser focus
+  // doesn't accidentally dismiss the modal.
+  const justFocusedRef = useRef(false)
+  useEffect(() => {
+    if (!open || preventBackdropClose) return
+    let timer: ReturnType<typeof setTimeout>
+    const onWindowFocus = () => {
+      justFocusedRef.current = true
+      clearTimeout(timer)
+      timer = setTimeout(() => { justFocusedRef.current = false }, 300)
+    }
+    window.addEventListener('focus', onWindowFocus)
+    return () => { window.removeEventListener('focus', onWindowFocus); clearTimeout(timer) }
+  }, [open, preventBackdropClose])
+
   // Close on Escape
   useEffect(() => {
     if (!open) return
@@ -42,7 +58,7 @@ export default function Modal({ open, onClose, title, subtitle, children, footer
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
+        onClick={preventBackdropClose ? undefined : () => { if (!justFocusedRef.current) onClose() }}
       />
 
       {/* Panel */}

@@ -51,7 +51,11 @@ function NewReturnModal({ open, onClose, onSuccess }: {
     supabase.from('rental_orders')
       .select(`id, order_number, event_name, event_date, status, customer:customers(first_name,last_name)`)
       .eq('company_id', profile.company_id)
-      .in('status', ['out_for_delivery','delivered','setup_done','event_active','pickup_scheduled','partially_returned'])
+      .in('status', [
+        'confirmed','inventory_reserved','scheduled_for_dispatch',
+        'out_for_delivery','setup_in_progress','event_active',
+        'pickup_scheduled','partially_returned','returned','inspection',
+      ])
       .order('event_date')
       .limit(50)
       .then(({ data }) => setOrders((data as RentalOrder[] | null) ?? []))

@@ -194,6 +194,8 @@ export interface OrderItem {
   rental_days: number
   line_total: number
   reservation_status: 'pending' | 'reserved' | 'confirmed' | 'out' | 'returned' | 'cancelled'
+  fulfilled_quantity: number
+  cancelled_quantity: number
   returned_quantity: number
   damaged_quantity: number
   missing_quantity: number

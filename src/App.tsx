@@ -15,6 +15,8 @@ import InvoiceDetailPage from '@/app/invoices/InvoiceDetailPage'
 import PaymentsPage from '@/app/payments/PaymentsPage'
 import DispatchPage from '@/app/dispatch/DispatchPage'
 import ReturnsPage from '@/app/returns/ReturnsPage'
+import DamagesPage from '@/app/damages/DamagesPage'
+import ReportsPage from '@/app/reports/ReportsPage'
 import PlaceholderPage from '@/components/common/PlaceholderPage'
 
 function LoadingScreen() {
@@ -118,9 +120,9 @@ function AppRoutes() {
         <Route path="returns" element={<ReturnsPage />} />
 
         <Route path="calendar"  element={<PlaceholderPage title="Calendar" description="Event calendar view — coming in Phase 3" icon="Calendar" />} />
-        <Route path="damages"   element={<PlaceholderPage title="Damage Reports" description="Damage reporting and assessment — coming in Phase 3" icon="AlertTriangle" />} />
+        <Route path="damages"   element={<DamagesPage />} />
         <Route path="expenses"  element={<PlaceholderPage title="Expenses" description="Operational expense tracking — coming in Phase 3" icon="Receipt" />} />
-        <Route path="reports"   element={<PlaceholderPage title="Reports" description="Financial and operational reports — coming in Phase 3" icon="BarChart3" />} />
+        <Route path="reports"   element={<ReportsPage />} />
         <Route path="settings"  element={<PlaceholderPage title="Settings" description="Company settings and configuration" icon="Settings" />} />
       </Route>
 

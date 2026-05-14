@@ -63,10 +63,25 @@ function RecordPaymentModal({
         processed_by: profile.id,
       })
       if (e) throw e
+
+      // Update invoice totals (in case no DB trigger exists)
+      if (form.payment_type !== 'refund') {
+        const newPaid = invoice.amount_paid + amount
+        const newBalance = Math.max(0, invoice.total - newPaid)
+        const newStatus = newBalance <= 0 ? 'paid' : invoice.amount_paid > 0 ? 'partial' : invoice.status
+        await supabase.from('invoices').update({
+          amount_paid: newPaid,
+          balance_due: newBalance,
+          status: newStatus,
+          ...(newBalance <= 0 ? { paid_at: new Date().toISOString() } : {}),
+        }).eq('id', invoice.id)
+      }
+
       onSuccess()
       onClose()
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to record payment')
+      const msg = (err as { message?: string }).message ?? String(err)
+      setError(msg)
     } finally {
       setSaving(false)
     }
@@ -76,6 +91,7 @@ function RecordPaymentModal({
     <Modal
       open={open}
       onClose={onClose}
+      preventBackdropClose
       title="Record Payment"
       subtitle={`Invoice ${invoice.invoice_number} · Balance: ${formatCurrency(invoice.balance_due)}`}
       footer={
@@ -207,8 +223,8 @@ export default function InvoiceDetailPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-start gap-4">
+      {/* Header — hidden in print */}
+      <div className="flex items-start gap-4 no-print">
         <button onClick={() => navigate('/invoices')} className="btn-ghost p-2 mt-0.5">
           <ArrowLeft className="w-4 h-4" />
         </button>
@@ -224,6 +240,12 @@ export default function InvoiceDetailPage() {
             <button onClick={() => setPaymentModal(true)} className="btn-primary">
               <Plus className="w-4 h-4" />
               Record Payment
+            </button>
+          )}
+          {isPaid && (
+            <button onClick={() => window.print()} className="btn-primary">
+              <Printer className="w-4 h-4" />
+              Print Receipt
             </button>
           )}
           {invoice.status === 'draft' && (
@@ -366,12 +388,71 @@ export default function InvoiceDetailPage() {
         </div>
       )}
 
-      {/* Actions */}
+      {/* Actions — hidden in print */}
       {!isPaid && !isVoided && (
-        <div className="flex justify-end">
+        <div className="flex justify-end no-print">
           <button onClick={voidInvoice} disabled={statusSaving} className="btn-ghost text-red-600 hover:text-red-700">
             Void Invoice
           </button>
+        </div>
+      )}
+
+      {/* Print-only receipt confirmation — hidden on screen, visible when printing */}
+      {isPaid && (
+        <div className="print-only hidden border-t-2 border-gray-800 pt-6 mt-6 space-y-4">
+          <div className="text-center">
+            <p className="text-xl font-bold uppercase tracking-widest">Payment Receipt</p>
+            {profile?.companies?.name && (
+              <p className="text-sm text-gray-600 mt-1">{profile.companies.name}</p>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm mt-4">
+            <div className="flex gap-2">
+              <span className="font-semibold w-32 flex-shrink-0">Invoice #</span>
+              <span className="font-mono">{invoice.invoice_number}</span>
+            </div>
+            <div className="flex gap-2">
+              <span className="font-semibold w-32 flex-shrink-0">Status</span>
+              <span className="font-semibold text-green-700 uppercase">Paid in Full</span>
+            </div>
+            <div className="flex gap-2">
+              <span className="font-semibold w-32 flex-shrink-0">Customer</span>
+              <span>{customer ? `${customer.first_name} ${customer.last_name}` : '—'}</span>
+            </div>
+            <div className="flex gap-2">
+              <span className="font-semibold w-32 flex-shrink-0">Date Paid</span>
+              <span>{invoice.paid_at ? formatDate(invoice.paid_at) : formatDate(invoice.issue_date)}</span>
+            </div>
+            <div className="flex gap-2">
+              <span className="font-semibold w-32 flex-shrink-0">Invoice Total</span>
+              <span>{formatCurrency(invoice.total)}</span>
+            </div>
+            <div className="flex gap-2">
+              <span className="font-semibold w-32 flex-shrink-0">Amount Paid</span>
+              <span className="font-semibold">{formatCurrency(invoice.amount_paid)}</span>
+            </div>
+            {payments.length > 0 && (
+              <>
+                <div className="flex gap-2">
+                  <span className="font-semibold w-32 flex-shrink-0">Method</span>
+                  <span className="capitalize">{payments[payments.length - 1].method}</span>
+                </div>
+                {payments[payments.length - 1].reference && (
+                  <div className="flex gap-2">
+                    <span className="font-semibold w-32 flex-shrink-0">Reference</span>
+                    <span className="font-mono">{payments[payments.length - 1].reference}</span>
+                  </div>
+                )}
+              </>
+            )}
+            <div className="flex gap-2">
+              <span className="font-semibold w-32 flex-shrink-0">Balance</span>
+              <span className="font-semibold">{invoice.balance_due <= 0 ? '$0.00' : formatCurrency(invoice.balance_due)}</span>
+            </div>
+          </div>
+          <p className="text-xs text-gray-400 text-center pt-4 border-t border-gray-200">
+            Thank you for your business.
+          </p>
         </div>
       )}
 
