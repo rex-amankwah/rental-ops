@@ -4,7 +4,7 @@ import { Plus, Loader2, Calendar, MapPin, User, Clock } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import Modal from '@/components/common/Modal'
-import { formatDate, DISPATCH_STATUS_CONFIG } from '@/lib/constants'
+import { formatDate, formatCurrency, DISPATCH_STATUS_CONFIG } from '@/lib/constants'
 import type { Dispatch, RentalOrder, Customer } from '@/types/database'
 import type { DispatchStatus } from '@/types/database'
 
@@ -183,11 +183,29 @@ export default function DispatchPage() {
   useEffect(() => { load() }, [load])
 
   async function advanceStatus(id: string, nextStatus: DispatchStatus) {
+    // Guard: warn before marking returned if invoice balance is outstanding
+    if (nextStatus === 'returned') {
+      const d = dispatches.find(x => x.id === id)
+      if (d?.order_id) {
+        const { data: invs } = await supabase
+          .from('invoices')
+          .select('balance_due')
+          .eq('order_id', d.order_id)
+          .gt('balance_due', 0)
+        const totalDue = (invs ?? []).reduce((sum, inv) => sum + ((inv.balance_due as number) ?? 0), 0)
+        if (totalDue > 0) {
+          const ok = window.confirm(
+            `This order still has an outstanding balance of ${formatCurrency(totalDue)}.\n\nMark as returned anyway?`
+          )
+          if (!ok) return
+        }
+      }
+    }
+
     const updates: Record<string, unknown> = { status: nextStatus, updated_at: new Date().toISOString() }
     if (nextStatus === 'delivered') updates.actual_delivery_at = new Date().toISOString()
     if (nextStatus === 'returned') {
       updates.actual_pickup_at = new Date().toISOString()
-      // Also mark the order as returned
       const d = dispatches.find(x => x.id === id)
       if (d?.order_id) {
         await supabase.from('rental_orders').update({ status: 'returned' }).eq('id', d.order_id)

@@ -1,6 +1,6 @@
-import { ChangeEvent, useEffect, useState, useCallback } from 'react'
+import { ChangeEvent, MouseEvent, useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, SlidersHorizontal, Plus, ClipboardList } from 'lucide-react'
+import { Search, SlidersHorizontal, Plus, ClipboardList, Truck } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { PageShell, PageHeader, TableCard, TableToolbar } from '@/components/common/PageShell'
@@ -32,6 +32,8 @@ const CLOSED_STATUSES: OrderStatus[] = [
   'completed','closed','cancelled','refunded'
 ]
 
+const DISPATCH_ELIGIBLE = new Set<string>(['confirmed', 'inventory_reserved', 'awaiting_deposit'])
+
 export default function OrdersPage() {
   const { profile } = useAuth()
   const navigate = useNavigate()
@@ -43,6 +45,7 @@ export default function OrdersPage() {
   const [sortKey, setSortKey] = useState('created_at')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [total, setTotal] = useState(0)
+  const [dispatchedOrderIds, setDispatchedOrderIds] = useState<Set<string>>(new Set())
 
   const fetchOrders = useCallback(async () => {
     if (!profile?.company_id) return
@@ -89,6 +92,13 @@ export default function OrdersPage() {
     const timer = setTimeout(fetchOrders, search ? 300 : 0)
     return () => clearTimeout(timer)
   }, [fetchOrders, search])
+
+  useEffect(() => {
+    if (!profile?.company_id) return
+    supabase.from('dispatches').select('order_id')
+      .eq('company_id', profile.company_id).neq('status', 'cancelled')
+      .then(({ data }) => setDispatchedOrderIds(new Set((data ?? []).map(d => d.order_id as string))))
+  }, [profile?.company_id])
 
   function handleSort(key: string) {
     if (sortKey === key) {
@@ -168,6 +178,33 @@ export default function OrdersPage() {
       label: 'Status',
       width: '130px',
       render: (row: OrderWithCustomer) => <StatusBadge type="order" status={row.status} />,
+    },
+    {
+      key: 'dispatch_action',
+      label: '',
+      width: '110px',
+      render: (row: OrderWithCustomer) => {
+        if (dispatchedOrderIds.has(row.id)) {
+          return (
+            <button
+              onClick={(e: MouseEvent) => { e.stopPropagation(); navigate('/dispatch') }}
+              className="badge text-[10px] bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors cursor-pointer"
+            >
+              On Board
+            </button>
+          )
+        }
+        if (!DISPATCH_ELIGIBLE.has(row.status)) return null
+        return (
+          <button
+            onClick={(e: MouseEvent) => { e.stopPropagation(); navigate(`/dispatch/new?orderId=${row.id}`) }}
+            className="btn-secondary text-xs py-1 px-2.5 flex items-center gap-1"
+          >
+            <Truck className="w-3 h-3" />
+            Dispatch
+          </button>
+        )
+      },
     },
   ]
 

@@ -33,6 +33,7 @@ export default function OrderDetailPage() {
   const [invoicing, setInvoicing] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const [fetchError, setFetchError] = useState<string | null>(null)
+  const [activeDispatch, setActiveDispatch] = useState<{ id: string; status: string } | null>(null)
 
   const fetchOrder = useCallback(async () => {
     if (!id || !profile?.company_id) return
@@ -40,29 +41,39 @@ export default function OrderDetailPage() {
     setNotFound(false)
     setFetchError(null)
     try {
-      const { data, error } = await supabase
-        .from('rental_orders')
-        .select(`
-          *,
-          customer:customers(*),
-          order_items(*),
-          invoices(*),
-          payments(*),
-          activity_logs(*)
-        `)
-        .eq('id', id)
-        .single()
+      const [orderResult, dispatchResult] = await Promise.all([
+        supabase
+          .from('rental_orders')
+          .select(`
+            *,
+            customer:customers(*),
+            order_items(*),
+            invoices(*),
+            payments(*),
+            activity_logs(*)
+          `)
+          .eq('id', id)
+          .single(),
+        supabase
+          .from('dispatches')
+          .select('id,status')
+          .eq('order_id', id)
+          .neq('status', 'cancelled')
+          .limit(1)
+          .maybeSingle(),
+      ])
 
-      if (error) {
-        if (error.code === 'PGRST116' || error.message?.includes('0 rows')) {
+      if (orderResult.error) {
+        if (orderResult.error.code === 'PGRST116' || orderResult.error.message?.includes('0 rows')) {
           setNotFound(true)
         } else {
-          console.error('[OrderDetailPage] fetch error:', error)
-          setFetchError(`${error.message} (${error.code})`)
+          console.error('[OrderDetailPage] fetch error:', orderResult.error)
+          setFetchError(`${orderResult.error.message} (${orderResult.error.code})`)
         }
         return
       }
-      setOrder(data as unknown as FullOrder)
+      setOrder(orderResult.data as unknown as FullOrder)
+      setActiveDispatch(dispatchResult.data ?? null)
     } catch (err) {
       console.error('[OrderDetailPage] unexpected error:', err)
       setFetchError(err instanceof Error ? err.message : String(err))
@@ -206,9 +217,14 @@ export default function OrderDetailPage() {
               Generate Invoice
             </button>
           )}
-          {/* Send to dispatch */}
-          {!['cancelled','refunded','closed','completed','returned'].includes(order.status) && (
-            <button onClick={() => navigate(`/dispatch/new?orderId=${order.id}`)} className="btn-secondary">
+          {/* Dispatch action */}
+          {activeDispatch ? (
+            <button onClick={() => navigate('/dispatch')} className="btn-secondary">
+              <Truck className="w-3.5 h-3.5" />
+              View Dispatch
+            </button>
+          ) : ['confirmed', 'inventory_reserved', 'awaiting_deposit'].includes(order.status) && (
+            <button onClick={() => navigate(`/dispatch/new?orderId=${order.id}`)} className="btn-primary">
               <Truck className="w-3.5 h-3.5" />
               Send to Dispatch
             </button>
