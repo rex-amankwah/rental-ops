@@ -1,10 +1,9 @@
-import { useEffect, useState, useCallback, ChangeEvent, MouseEvent } from 'react'
+import { useEffect, useState, useCallback, MouseEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Truck, Plus, Loader2, Calendar, MapPin, User, AlertTriangle } from 'lucide-react'
+import { Plus, Loader2, Calendar, MapPin, User } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import Modal from '@/components/common/Modal'
-import { InputField, SelectField, TextareaField } from '@/components/common/FormField'
 import { formatDate, DISPATCH_STATUS_CONFIG } from '@/lib/constants'
 import type { Dispatch, RentalOrder, Customer } from '@/types/database'
 import type { DispatchStatus } from '@/types/database'
@@ -116,188 +115,6 @@ function DispatchCard({
   )
 }
 
-// ─── New Dispatch Modal ──────────────────────────────────────────────────────
-
-function NewDispatchModal({
-  open, onClose, onSuccess
-}: {
-  open: boolean
-  onClose: () => void
-  onSuccess: () => void
-}) {
-  const { profile } = useAuth()
-  const [orders, setOrders] = useState<RentalOrder[]>([])
-  const [form, setForm] = useState({
-    order_id: '', dispatch_type: 'delivery',
-    scheduled_delivery_date: '', scheduled_delivery_time: '',
-    scheduled_pickup_date: '', scheduled_pickup_time: '',
-    delivery_address: '', delivery_city: '', delivery_state: '', delivery_zip: '',
-    contact_name: '', contact_phone: '',
-    delivery_notes: '', pickup_notes: '', route_notes: '',
-  })
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!open || !profile?.company_id) return
-    supabase.from('rental_orders').select(`
-      id, order_number, event_name, event_date, status,
-      venue_name, venue_address, venue_city, venue_state, venue_zip,
-      customer:customers(first_name, last_name)
-    `)
-      .eq('company_id', profile.company_id)
-      .in('status', ['confirmed','inventory_reserved','scheduled_for_dispatch'])
-      .order('event_date')
-      .limit(50)
-      .then(({ data }) => setOrders((data as RentalOrder[] | null) ?? []))
-  }, [open, profile?.company_id])
-
-  // Auto-fill address from selected order
-  useEffect(() => {
-    if (!form.order_id) return
-    const order = orders.find(o => o.id === form.order_id)
-    if (order) {
-      setForm(p => ({
-        ...p,
-        delivery_address: order.venue_address ?? '',
-        delivery_city: order.venue_city ?? '',
-        delivery_state: order.venue_state ?? '',
-        delivery_zip: order.venue_zip ?? '',
-        scheduled_delivery_date: order.delivery_date ?? order.event_date ?? '',
-        scheduled_pickup_date: order.pickup_date ?? '',
-      }))
-    }
-  }, [form.order_id, orders])
-
-  async function save() {
-    if (!profile?.company_id) return
-    if (!form.order_id) { setError('Please select an order'); return }
-    setSaving(true); setError(null)
-    try {
-      const { error: e } = await supabase.from('dispatches').insert({
-        company_id: profile.company_id,
-        order_id: form.order_id,
-        dispatch_type: form.dispatch_type,
-        status: 'scheduled',
-        scheduled_delivery_date: form.scheduled_delivery_date || null,
-        scheduled_delivery_time: form.scheduled_delivery_time || null,
-        scheduled_pickup_date: form.scheduled_pickup_date || null,
-        scheduled_pickup_time: form.scheduled_pickup_time || null,
-        delivery_address: form.delivery_address || null,
-        delivery_city: form.delivery_city || null,
-        delivery_state: form.delivery_state || null,
-        delivery_zip: form.delivery_zip || null,
-        contact_name: form.contact_name || null,
-        contact_phone: form.contact_phone || null,
-        delivery_notes: form.delivery_notes || null,
-        pickup_notes: form.pickup_notes || null,
-        route_notes: form.route_notes || null,
-      })
-      if (e) throw e
-
-      // Update order status to scheduled_for_dispatch
-      await supabase.from('rental_orders').update({ status: 'scheduled_for_dispatch' })
-        .eq('id', form.order_id).in('status', ['confirmed','inventory_reserved'])
-
-      onSuccess(); onClose()
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to create dispatch')
-    } finally { setSaving(false) }
-  }
-
-  return (
-    <Modal
-      open={open} onClose={onClose} title="Create Dispatch" size="xl"
-      footer={
-        <>
-          <button onClick={onClose} className="btn-secondary" disabled={saving}>Cancel</button>
-          <button onClick={save} className="btn-primary" disabled={saving}>
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Truck className="w-4 h-4" />}
-            Create Dispatch
-          </button>
-        </>
-      }
-    >
-      <div className="space-y-4">
-        {error && <div className="alert alert-error"><AlertTriangle className="w-4 h-4" /><span>{error}</span></div>}
-
-        <div className="grid grid-cols-2 gap-4">
-          <SelectField
-            label="Order" required fieldClassName="col-span-2"
-            value={form.order_id}
-            onChange={(e: ChangeEvent<HTMLSelectElement>) => setForm(p => ({ ...p, order_id: e.target.value }))}
-          >
-            <option value="">Select order…</option>
-            {orders.map(o => {
-              const c = (o as unknown as { customer: { first_name: string; last_name: string } | null }).customer
-              return (
-                <option key={o.id} value={o.id}>
-                  {o.order_number} — {c ? `${c.first_name} ${c.last_name}` : 'No customer'} · {formatDate(o.event_date)}
-                </option>
-              )
-            })}
-          </SelectField>
-
-          <SelectField
-            label="Type"
-            value={form.dispatch_type}
-            onChange={(e: ChangeEvent<HTMLSelectElement>) => setForm(p => ({ ...p, dispatch_type: e.target.value }))}
-          >
-            <option value="delivery">Delivery</option>
-            <option value="pickup">Pickup</option>
-            <option value="both">Delivery + Pickup</option>
-          </SelectField>
-        </div>
-
-        <div className="border-t border-border pt-4">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Schedule</p>
-          <div className="grid grid-cols-2 gap-4">
-            {(form.dispatch_type === 'delivery' || form.dispatch_type === 'both') && <>
-              <InputField label="Delivery Date" type="date" value={form.scheduled_delivery_date}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setForm(p => ({ ...p, scheduled_delivery_date: e.target.value }))} />
-              <InputField label="Delivery Time" type="time" value={form.scheduled_delivery_time}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setForm(p => ({ ...p, scheduled_delivery_time: e.target.value }))} />
-            </>}
-            {(form.dispatch_type === 'pickup' || form.dispatch_type === 'both') && <>
-              <InputField label="Pickup Date" type="date" value={form.scheduled_pickup_date}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setForm(p => ({ ...p, scheduled_pickup_date: e.target.value }))} />
-              <InputField label="Pickup Time" type="time" value={form.scheduled_pickup_time}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setForm(p => ({ ...p, scheduled_pickup_time: e.target.value }))} />
-            </>}
-          </div>
-        </div>
-
-        <div className="border-t border-border pt-4">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Delivery Address</p>
-          <div className="grid grid-cols-2 gap-4">
-            <InputField label="Address" fieldClassName="col-span-2" value={form.delivery_address}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => setForm(p => ({ ...p, delivery_address: e.target.value }))} />
-            <InputField label="City" value={form.delivery_city}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => setForm(p => ({ ...p, delivery_city: e.target.value }))} />
-            <div className="grid grid-cols-2 gap-3">
-              <InputField label="State" maxLength={2} value={form.delivery_state}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setForm(p => ({ ...p, delivery_state: e.target.value.toUpperCase() }))} />
-              <InputField label="ZIP" value={form.delivery_zip}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setForm(p => ({ ...p, delivery_zip: e.target.value }))} />
-            </div>
-            <InputField label="Contact Name" value={form.contact_name}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => setForm(p => ({ ...p, contact_name: e.target.value }))} />
-            <InputField label="Contact Phone" type="tel" value={form.contact_phone}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => setForm(p => ({ ...p, contact_phone: e.target.value }))} />
-          </div>
-        </div>
-
-        <div className="border-t border-border pt-4 space-y-3">
-          <TextareaField label="Delivery Notes" value={form.delivery_notes}
-            onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setForm(p => ({ ...p, delivery_notes: e.target.value }))} />
-          <TextareaField label="Route Notes" value={form.route_notes}
-            onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setForm(p => ({ ...p, route_notes: e.target.value }))} />
-        </div>
-      </div>
-    </Modal>
-  )
-}
-
 // ─── Main page ───────────────────────────────────────────────────────────────
 
 export default function DispatchPage() {
@@ -305,7 +122,6 @@ export default function DispatchPage() {
   const navigate = useNavigate()
   const [dispatches, setDispatches] = useState<DispatchWithOrder[]>([])
   const [loading, setLoading] = useState(true)
-  const [newModal, setNewModal] = useState(false)
   const [selectedDispatch, setSelectedDispatch] = useState<DispatchWithOrder | null>(null)
 
   const load = useCallback(async () => {
@@ -363,7 +179,7 @@ export default function DispatchPage() {
           <h2 className="page-title">Dispatch Board</h2>
           <p className="page-subtitle">{dispatches.length} active dispatch{dispatches.length !== 1 ? 'es' : ''}</p>
         </div>
-        <button onClick={() => setNewModal(true)} className="btn-primary">
+        <button onClick={() => navigate('/dispatch/new')} className="btn-primary">
           <Plus className="w-4 h-4" />
           New Dispatch
         </button>
@@ -409,13 +225,6 @@ export default function DispatchPage() {
           })}
         </div>
       </div>
-
-      {/* New dispatch modal */}
-      <NewDispatchModal
-        open={newModal}
-        onClose={() => setNewModal(false)}
-        onSuccess={load}
-      />
 
       {/* Dispatch detail modal */}
       {selectedDispatch && (

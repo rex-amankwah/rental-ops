@@ -1,15 +1,13 @@
-import { useEffect, useState, useCallback, ChangeEvent } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
-  ArrowLeft, Send, CheckCircle2, AlertTriangle,
+  ArrowLeft, Send,
   Plus, Printer, DollarSign, Loader2
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { StatusBadge } from '@/components/common/StatusBadge'
-import Modal from '@/components/common/Modal'
-import { InputField, SelectField, TextareaField } from '@/components/common/FormField'
-import { formatCurrency, formatDate, PAYMENT_METHODS } from '@/lib/constants'
+import { formatCurrency, formatDate } from '@/lib/constants'
 import type { Invoice, InvoiceItem, Customer, RentalOrder, Payment } from '@/types/database'
 
 type FullInvoice = Invoice & {
@@ -17,215 +15,6 @@ type FullInvoice = Invoice & {
   order: RentalOrder | null
   items: InvoiceItem[]
   payments: Payment[]
-}
-
-// ─── Record Payment Modal ────────────────────────────────────────────────────
-
-function RecordPaymentModal({
-  open, onClose, invoice, onSuccess
-}: {
-  open: boolean
-  onClose: () => void
-  invoice: FullInvoice
-  onSuccess: () => void
-}) {
-  const { profile } = useAuth()
-  const [form, setForm] = useState({
-    amount: String(invoice.balance_due > 0 ? invoice.balance_due : invoice.total),
-    method: 'cash' as string,
-    payment_type: 'payment' as string,
-    reference: '',
-    notes: '',
-    payment_date: new Date().toISOString().split('T')[0],
-  })
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  // Reset form to clean state each time the modal opens.
-  useEffect(() => {
-    if (!open) return
-    setForm({
-      amount: String(invoice.balance_due > 0 ? invoice.balance_due : invoice.total),
-      method: 'cash',
-      payment_type: invoice.balance_due > 0 ? 'payment' : 'deposit',
-      reference: '',
-      notes: '',
-      payment_date: new Date().toISOString().split('T')[0],
-    })
-    setError(null)
-  }, [open, invoice.balance_due, invoice.total])
-
-  // Auto-set payment type based on amount vs balance for standard payment types.
-  useEffect(() => {
-    if (!['payment', 'partial_payment'].includes(form.payment_type)) return
-    const amt = parseFloat(form.amount)
-    if (isNaN(amt) || amt <= 0) return
-    const derived = amt >= invoice.balance_due ? 'payment' : 'partial_payment'
-    if (derived !== form.payment_type) setForm(p => ({ ...p, payment_type: derived }))
-  }, [form.amount, invoice.balance_due]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const parsedAmount = parseFloat(form.amount) || 0
-  const isOverpayment = parsedAmount > invoice.balance_due && invoice.balance_due > 0
-  const isStandardType = ['payment', 'partial_payment'].includes(form.payment_type)
-
-  async function save() {
-    if (!profile?.company_id) return
-    const amount = parseFloat(form.amount)
-    if (!amount || amount <= 0) { setError('Amount must be greater than 0'); return }
-    if (isOverpayment && isStandardType) {
-      setError(`Amount ${formatCurrency(amount)} exceeds the balance due of ${formatCurrency(invoice.balance_due)}. Reduce the amount, or change the type to Deposit if recording a pre-payment.`)
-      return
-    }
-    setSaving(true)
-    setError(null)
-    try {
-      const { error: e } = await supabase.from('payments').insert({
-        company_id:   profile.company_id,
-        invoice_id:   invoice.id,
-        order_id:     invoice.order_id,
-        customer_id:  invoice.customer_id,
-        payment_type: form.payment_type,
-        method:       form.method,
-        status:       'completed',
-        amount,
-        reference:    form.reference || null,
-        notes:        form.notes || null,
-        payment_date: form.payment_date,
-        processed_by: profile.id,
-      })
-      if (e) throw e
-
-      // Update invoice totals (guards against missing DB trigger).
-      if (form.payment_type !== 'refund') {
-        const newPaid = invoice.amount_paid + amount
-        const newBalance = Math.max(0, invoice.total - newPaid)
-        const newStatus = newBalance <= 0 ? 'paid' : newPaid > 0 ? 'partial' : invoice.status
-        await supabase.from('invoices').update({
-          amount_paid: newPaid,
-          balance_due: newBalance,
-          status: newStatus,
-          ...(newBalance <= 0 ? { paid_at: new Date().toISOString() } : {}),
-        }).eq('id', invoice.id)
-      }
-
-      onSuccess()
-      onClose()
-    } catch (err: unknown) {
-      setError((err as { message?: string }).message ?? String(err))
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Record Payment"
-      subtitle={`Invoice ${invoice.invoice_number}`}
-      footer={
-        <>
-          <button onClick={onClose} className="btn-secondary" disabled={saving}>Cancel</button>
-          <button onClick={save} className="btn-primary" disabled={saving || (isOverpayment && isStandardType)}>
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-            Record Payment
-          </button>
-        </>
-      }
-    >
-      <div className="space-y-4">
-        {error && (
-          <div className="alert alert-error">
-            <AlertTriangle className="w-4 h-4 flex-shrink-0" /><span>{error}</span>
-          </div>
-        )}
-
-        {/* Read-only invoice balance summary */}
-        <div className="bg-muted/50 rounded-lg px-4 py-3 space-y-1.5 text-sm border border-border">
-          <div className="flex justify-between text-muted-foreground">
-            <span>Invoice Total</span>
-            <span className="font-medium text-foreground">{formatCurrency(invoice.total)}</span>
-          </div>
-          {invoice.amount_paid > 0 && (
-            <div className="flex justify-between text-muted-foreground">
-              <span>Already Paid</span>
-              <span className="font-medium text-emerald-600">{formatCurrency(invoice.amount_paid)}</span>
-            </div>
-          )}
-          <div className="flex justify-between font-semibold border-t border-border pt-1.5 mt-0.5">
-            <span>Balance Due</span>
-            <span className={invoice.balance_due > 0 ? 'text-red-600' : 'text-emerald-600'}>
-              {formatCurrency(invoice.balance_due)}
-            </span>
-          </div>
-        </div>
-
-        {/* Overpayment warning */}
-        {isOverpayment && isStandardType && (
-          <div className="alert alert-warning">
-            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-            <span>
-              Amount exceeds the balance due by {formatCurrency(parsedAmount - invoice.balance_due)}.
-              Change type to <strong>Deposit</strong> if this is a pre-payment.
-            </span>
-          </div>
-        )}
-
-        {/* Amount */}
-        <div className="space-y-1.5">
-          <label className="form-label">Amount Being Paid Now <span className="text-red-500">*</span></label>
-          <input
-            type="number" min="0.01" step="0.01" required
-            value={form.amount}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => setForm(p => ({ ...p, amount: e.target.value }))}
-            className={`form-input ${isOverpayment && isStandardType ? 'border-amber-400 focus:ring-amber-400' : ''}`}
-            placeholder="0.00"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <InputField
-            label="Date" required type="date"
-            value={form.payment_date}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => setForm(p => ({ ...p, payment_date: e.target.value }))}
-          />
-          {/* Payment type — auto-set, but user can override */}
-          <SelectField
-            label="Payment Type"
-            value={form.payment_type}
-            onChange={(e: ChangeEvent<HTMLSelectElement>) => setForm(p => ({ ...p, payment_type: e.target.value }))}
-          >
-            <option value="payment">Full Payment</option>
-            <option value="partial_payment">Partial Payment</option>
-            <option value="deposit">Deposit / Pre-payment</option>
-            <option value="security_deposit">Security Deposit</option>
-            <option value="refund">Refund</option>
-          </SelectField>
-        </div>
-
-        <SelectField
-          label="Method"
-          value={form.method}
-          onChange={(e: ChangeEvent<HTMLSelectElement>) => setForm(p => ({ ...p, method: e.target.value }))}
-        >
-          {PAYMENT_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-        </SelectField>
-
-        <InputField
-          label="Reference / Check #"
-          placeholder="Optional — check number, transaction ID…"
-          value={form.reference}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => setForm(p => ({ ...p, reference: e.target.value }))}
-        />
-        <TextareaField
-          label="Notes"
-          placeholder="Optional note…"
-          value={form.notes}
-          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setForm(p => ({ ...p, notes: e.target.value }))}
-        />
-      </div>
-    </Modal>
-  )
 }
 
 // ─── Main page ───────────────────────────────────────────────────────────────
@@ -236,7 +25,6 @@ export default function InvoiceDetailPage() {
   const { profile } = useAuth()
   const [invoice, setInvoice] = useState<FullInvoice | null>(null)
   const [loading, setLoading] = useState(true)
-  const [paymentModal, setPaymentModal] = useState(false)
   const [statusSaving, setStatusSaving] = useState(false)
 
   const load = useCallback(async () => {
@@ -312,7 +100,7 @@ export default function InvoiceDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           {!isPaid && !isVoided && (
-            <button onClick={() => setPaymentModal(true)} className="btn-primary">
+            <button onClick={() => navigate(`/payments/new?invoiceId=${invoice.id}`)} className="btn-primary">
               <Plus className="w-4 h-4" />
               Record Payment
             </button>
@@ -531,13 +319,6 @@ export default function InvoiceDetailPage() {
         </div>
       )}
 
-      {/* Payment modal */}
-      <RecordPaymentModal
-        open={paymentModal}
-        onClose={() => setPaymentModal(false)}
-        invoice={invoice}
-        onSuccess={load}
-      />
     </div>
   )
 }

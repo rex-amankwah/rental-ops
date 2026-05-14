@@ -9,14 +9,19 @@ import OrderDetailPage from '@/app/orders/OrderDetailPage'
 import NewOrderPage from '@/app/orders/NewOrderPage'
 import CustomersPage from '@/app/customers/CustomersPage'
 import CustomerDetailPage from '@/app/customers/CustomerDetailPage'
+import NewCustomerPage from '@/app/customers/NewCustomerPage'
 import InventoryPage from '@/app/inventory/InventoryPage'
+import NewInventoryPage from '@/app/inventory/NewInventoryPage'
 import InvoicesPage from '@/app/invoices/InvoicesPage'
 import InvoiceDetailPage from '@/app/invoices/InvoiceDetailPage'
 import PaymentsPage from '@/app/payments/PaymentsPage'
+import NewPaymentPage from '@/app/payments/NewPaymentPage'
 import DispatchPage from '@/app/dispatch/DispatchPage'
+import NewDispatchPage from '@/app/dispatch/NewDispatchPage'
 import ReturnsPage from '@/app/returns/ReturnsPage'
 import NewReturnPage from '@/app/returns/NewReturnPage'
 import DamagesPage from '@/app/damages/DamagesPage'
+import NewDamagePage from '@/app/damages/NewDamagePage'
 import ReportsPage from '@/app/reports/ReportsPage'
 import PlaceholderPage from '@/components/common/PlaceholderPage'
 
@@ -110,19 +115,27 @@ function AppRoutes() {
         <Route path="orders/:id" element={<OrderDetailPage />} />
 
         <Route path="customers" element={<CustomersPage />} />
+        <Route path="customers/new" element={<NewCustomerPage />} />
         <Route path="customers/:id" element={<CustomerDetailPage />} />
+
         <Route path="inventory" element={<InventoryPage />} />
+        <Route path="inventory/new" element={<NewInventoryPage />} />
 
         <Route path="invoices" element={<InvoicesPage />} />
         <Route path="invoices/:id" element={<InvoiceDetailPage />} />
 
         <Route path="payments" element={<PaymentsPage />} />
+        <Route path="payments/new" element={<NewPaymentPage />} />
+
         <Route path="dispatch" element={<DispatchPage />} />
+        <Route path="dispatch/new" element={<NewDispatchPage />} />
+
         <Route path="returns" element={<ReturnsPage />} />
         <Route path="returns/new" element={<NewReturnPage />} />
 
         <Route path="calendar"  element={<PlaceholderPage title="Calendar" description="Event calendar view — coming in Phase 3" icon="Calendar" />} />
         <Route path="damages"   element={<DamagesPage />} />
+        <Route path="damages/new" element={<NewDamagePage />} />
         <Route path="expenses"  element={<PlaceholderPage title="Expenses" description="Operational expense tracking — coming in Phase 3" icon="Receipt" />} />
         <Route path="reports"   element={<ReportsPage />} />
         <Route path="settings"  element={<PlaceholderPage title="Settings" description="Company settings and configuration" icon="Settings" />} />

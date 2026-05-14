@@ -1,262 +1,12 @@
 import { useEffect, useState, useCallback, ChangeEvent, MouseEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Plus, Users, Mail, Phone, Building2, Loader2, AlertTriangle } from 'lucide-react'
+import { Search, Plus, Users, Mail, Phone, Building2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { PageShell, PageHeader, TableCard, TableToolbar } from '@/components/common/PageShell'
 import { DataTable } from '@/components/common/DataTable'
-import Modal from '@/components/common/Modal'
 import { formatCurrency, formatDate } from '@/lib/constants'
 import type { Customer } from '@/types/database'
-
-const US_STATES = [
-  'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA',
-  'HI','ID','IL','IN','IA','KS','KY','LA','ME','MD',
-  'MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
-  'NM','NY','NC','ND','OH','OK','OR','PA','RI','SC',
-  'SD','TN','TX','UT','VT','VA','WA','WV','WI','WY',
-]
-
-// ─── New Customer Modal ───────────────────────────────────────────────────────
-
-interface NewCustomerForm {
-  first_name: string
-  last_name: string
-  email: string
-  phone: string
-  company_name: string
-  billing_city: string
-  billing_state: string
-}
-
-const BLANK_FORM: NewCustomerForm = {
-  first_name: '',
-  last_name: '',
-  email: '',
-  phone: '',
-  company_name: '',
-  billing_city: '',
-  billing_state: '',
-}
-
-interface NewCustomerModalProps {
-  open: boolean
-  onClose: () => void
-  onSaved: () => void
-}
-
-function NewCustomerModal({ open, onClose, onSaved }: NewCustomerModalProps) {
-  const { profile } = useAuth()
-  const [form, setForm] = useState<NewCustomerForm>(BLANK_FORM)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [fieldErrors, setFieldErrors] = useState<Partial<NewCustomerForm>>({})
-
-  // Reset form when modal opens
-  useEffect(() => {
-    if (open) {
-      setForm(BLANK_FORM)
-      setError(null)
-      setFieldErrors({})
-    }
-  }, [open])
-
-  function set(field: keyof NewCustomerForm, value: string) {
-    setForm(prev => ({ ...prev, [field]: value }))
-    // Clear field error on change
-    if (fieldErrors[field]) {
-      setFieldErrors(prev => { const n = { ...prev }; delete n[field]; return n })
-    }
-  }
-
-  function validate(): boolean {
-    const errors: Partial<NewCustomerForm> = {}
-    if (!form.first_name.trim()) errors.first_name = 'First name is required'
-    if (!form.last_name.trim()) errors.last_name = 'Last name is required'
-    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      errors.email = 'Enter a valid email address'
-    }
-    setFieldErrors(errors)
-    return Object.keys(errors).length === 0
-  }
-
-  async function handleSave() {
-    if (!validate()) return
-    if (!profile?.company_id) {
-      setError('No company found. Please reload the page.')
-      return
-    }
-
-    setSaving(true)
-    setError(null)
-
-    try {
-      const { error: insertError } = await supabase.from('customers').insert({
-        company_id:   profile.company_id,
-        first_name:   form.first_name.trim(),
-        last_name:    form.last_name.trim(),
-        email:        form.email.trim() || null,
-        phone:        form.phone.trim() || null,
-        company_name: form.company_name.trim() || null,
-        billing_city: form.billing_city.trim() || null,
-        billing_state: form.billing_state.trim().toUpperCase() || null,
-        is_active:    true,
-        total_orders: 0,
-        total_spent:  0,
-      })
-
-      if (insertError) {
-        console.error('[NewCustomerModal] Insert error:', insertError)
-        throw insertError
-      }
-
-      onSaved()
-      onClose()
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err)
-      setError(`Failed to save customer: ${msg}`)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="New Customer"
-      subtitle="Add a customer to your account"
-      size="md"
-      footer={
-        <>
-          <button onClick={onClose} className="btn-secondary" disabled={saving}>
-            Cancel
-          </button>
-          <button onClick={handleSave} className="btn-primary" disabled={saving}>
-            {saving ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
-            ) : (
-              <><Plus className="w-4 h-4" /> Add Customer</>
-            )}
-          </button>
-        </>
-      }
-    >
-      <div className="space-y-4">
-        {/* Global error */}
-        {error && (
-          <div className="alert alert-error">
-            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {/* Name row */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <label className="form-label">
-              First Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={form.first_name}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => set('first_name', e.target.value)}
-              placeholder="Maria"
-              className={`form-input ${fieldErrors.first_name ? 'border-red-400' : ''}`}
-              autoFocus
-            />
-            {fieldErrors.first_name && (
-              <p className="text-xs text-red-600">{fieldErrors.first_name}</p>
-            )}
-          </div>
-          <div className="space-y-1.5">
-            <label className="form-label">
-              Last Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={form.last_name}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => set('last_name', e.target.value)}
-              placeholder="Rodriguez"
-              className={`form-input ${fieldErrors.last_name ? 'border-red-400' : ''}`}
-            />
-            {fieldErrors.last_name && (
-              <p className="text-xs text-red-600">{fieldErrors.last_name}</p>
-            )}
-          </div>
-        </div>
-
-        {/* Email */}
-        <div className="space-y-1.5">
-          <label className="form-label">Email</label>
-          <input
-            type="email"
-            value={form.email}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => set('email', e.target.value)}
-            placeholder="maria@example.com"
-            className={`form-input ${fieldErrors.email ? 'border-red-400' : ''}`}
-          />
-          {fieldErrors.email && (
-            <p className="text-xs text-red-600">{fieldErrors.email}</p>
-          )}
-        </div>
-
-        {/* Phone */}
-        <div className="space-y-1.5">
-          <label className="form-label">Phone</label>
-          <input
-            type="tel"
-            value={form.phone}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => set('phone', e.target.value)}
-            placeholder="(713) 555-0100"
-            className="form-input"
-          />
-        </div>
-
-        {/* Company name */}
-        <div className="space-y-1.5">
-          <label className="form-label">Company Name</label>
-          <input
-            type="text"
-            value={form.company_name}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => set('company_name', e.target.value)}
-            placeholder="Optional — for business customers"
-            className="form-input"
-          />
-        </div>
-
-        {/* City + State */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <label className="form-label">City</label>
-            <input
-              type="text"
-              value={form.billing_city}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => set('billing_city', e.target.value)}
-              placeholder="Houston"
-              className="form-input"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="form-label">State</label>
-            <select
-              value={form.billing_state}
-              onChange={(e: ChangeEvent<HTMLSelectElement>) => set('billing_state', e.target.value)}
-              className="form-select"
-            >
-              <option value="">— Select —</option>
-              {US_STATES.map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-    </Modal>
-  )
-}
-
-// ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function CustomersPage() {
   const { profile } = useAuth()
@@ -267,7 +17,6 @@ export default function CustomersPage() {
   const [total, setTotal] = useState(0)
   const [sortKey, setSortKey] = useState('created_at')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
-  const [showNewModal, setShowNewModal] = useState(false)
 
   const fetchCustomers = useCallback(async () => {
     if (!profile?.company_id) return
@@ -407,7 +156,7 @@ export default function CustomersPage() {
         title="Customers"
         subtitle={`${total} total customer${total !== 1 ? 's' : ''}`}
         actions={
-          <button onClick={() => setShowNewModal(true)} className="btn-primary">
+          <button onClick={() => navigate('/customers/new')} className="btn-primary">
             <Plus className="w-4 h-4" />
             New Customer
           </button>
@@ -453,19 +202,13 @@ export default function CustomersPage() {
           <p className="text-sm text-muted-foreground mb-4 max-w-xs">
             Add customers to start creating orders and tracking rental history.
           </p>
-          <button onClick={() => setShowNewModal(true)} className="btn-primary">
+          <button onClick={() => navigate('/customers/new')} className="btn-primary">
             <Plus className="w-4 h-4" />
             Add First Customer
           </button>
         </div>
       )}
 
-      {/* New Customer Modal */}
-      <NewCustomerModal
-        open={showNewModal}
-        onClose={() => setShowNewModal(false)}
-        onSaved={fetchCustomers}
-      />
     </PageShell>
   )
 }
