@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useAvailability } from '@/hooks/useAvailability'
 import { StatusBadge, PriorityBadge } from '@/components/common/StatusBadge'
 import { formatCurrency, formatDate, ORDER_STATUS_CONFIG } from '@/lib/constants'
+import { RESERVATION_STATUS_COLORS, getReservationStatusClass, PAYMENT_STATUS_COLORS, getPaymentStatusClass } from '@/lib/statusColors'
 import { canEdit } from '@/lib/roles'
 import type { RentalOrder, Customer, OrderItem, Invoice, Payment, ActivityLog } from '@/types/database'
 
@@ -514,13 +515,8 @@ export default function OrderDetailPage() {
                           <td className="text-right text-sm">{item.rental_days}</td>
                           <td className="text-right text-sm font-medium">{formatCurrency(item.line_total)}</td>
                           <td>
-                            <span className={`badge text-xs ${
-                              item.reservation_status === 'reserved' ? 'bg-blue-100 text-blue-700' :
-                              item.reservation_status === 'out' ? 'bg-violet-100 text-violet-700' :
-                              item.reservation_status === 'returned' ? 'bg-emerald-100 text-emerald-700' :
-                              'bg-muted text-muted-foreground'
-                            }`}>
-                              {item.reservation_status}
+                            <span className={`badge text-xs ${getReservationStatusClass(item.reservation_status)}`}>
+                              {RESERVATION_STATUS_COLORS[item.reservation_status]?.label ?? item.reservation_status}
                             </span>
                           </td>
                         </tr>
@@ -621,12 +617,8 @@ export default function OrderDetailPage() {
                             {pmt.payment_type === 'refund' ? '-' : ''}{formatCurrency(pmt.amount)}
                           </td>
                           <td>
-                            <span className={`badge text-xs ${
-                              pmt.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
-                              pmt.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                              'bg-red-100 text-red-700'
-                            }`}>
-                              {pmt.status}
+                            <span className={`badge text-xs ${getPaymentStatusClass(pmt.status)}`}>
+                              {PAYMENT_STATUS_COLORS[pmt.status]?.label ?? pmt.status}
                             </span>
                           </td>
                         </tr>

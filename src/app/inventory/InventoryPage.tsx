@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { PageShell, PageHeader, TableCard, TableToolbar, StatCard } from '@/components/common/PageShell'
 import { DataTable } from '@/components/common/DataTable'
 import { INVENTORY_CATEGORIES } from '@/lib/constants'
+import { TRACKING_TYPE_COLORS, getTrackingTypeClass } from '@/lib/statusColors'
 import { canEdit } from '@/lib/roles'
 import type { InventoryCatalogItem } from '@/types/database'
 
@@ -95,8 +96,8 @@ export default function InventoryPage() {
     {
       key: 'tracking_type', label: 'Tracking',
       render: (row: InventoryCatalogItem) => (
-        <span className={`badge text-xs ${row.tracking_type === 'serialized' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>
-          {row.tracking_type}
+        <span className={`badge text-xs ${getTrackingTypeClass(row.tracking_type)}`}>
+          {TRACKING_TYPE_COLORS[row.tracking_type]?.label ?? row.tracking_type}
         </span>
       ),
     },

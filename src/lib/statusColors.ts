@@ -10,8 +10,8 @@
  * use directly in className.
  */
 
-import { DISPATCH_STATUS_CONFIG } from '@/lib/constants'
-import type { DispatchStatus } from '@/types/database'
+import { DISPATCH_STATUS_CONFIG, ORDER_STATUS_CONFIG, INVOICE_STATUS_CONFIG } from '@/lib/constants'
+import type { DispatchStatus, OrderStatus, InvoiceStatus } from '@/types/database'
 
 // ─── Fallback ─────────────────────────────────────────────────────────────────
 
@@ -119,6 +119,68 @@ export const ROLE_ALIAS: Record<string, string> = {
 export function getRoleClass(role: string): string {
   const normalized = ROLE_ALIAS[role] ?? role
   return lookupClass(ROLE_COLORS, normalized)
+}
+
+// ─── Payment record status ────────────────────────────────────────────────────
+
+export const PAYMENT_STATUS_COLORS: Record<string, { label: string; bg: string; color: string }> = {
+  pending:   { label: 'Pending',   bg: 'bg-amber-100',   color: 'text-amber-700' },
+  completed: { label: 'Completed', bg: 'bg-emerald-100', color: 'text-emerald-700' },
+  failed:    { label: 'Failed',    bg: 'bg-red-100',     color: 'text-red-700' },
+  refunded:  { label: 'Refunded',  bg: 'bg-red-100',     color: 'text-red-700' },
+  voided:    { label: 'Voided',    bg: 'bg-muted',       color: 'text-muted-foreground' },
+}
+
+export function getPaymentStatusClass(status: string): string {
+  return lookupClass(PAYMENT_STATUS_COLORS, status)
+}
+
+// ─── Order item reservation status ───────────────────────────────────────────
+
+export const RESERVATION_STATUS_COLORS: Record<string, { label: string; bg: string; color: string }> = {
+  pending:   { label: 'Pending',   bg: 'bg-muted',       color: 'text-muted-foreground' },
+  reserved:  { label: 'Reserved',  bg: 'bg-blue-100',    color: 'text-blue-700' },
+  confirmed: { label: 'Confirmed', bg: 'bg-teal-100',    color: 'text-teal-700' },
+  out:       { label: 'Out',       bg: 'bg-violet-100',  color: 'text-violet-700' },
+  returned:  { label: 'Returned',  bg: 'bg-emerald-100', color: 'text-emerald-700' },
+  cancelled: { label: 'Cancelled', bg: 'bg-muted',       color: 'text-muted-foreground' },
+}
+
+export function getReservationStatusClass(status: string): string {
+  return lookupClass(RESERVATION_STATUS_COLORS, status)
+}
+
+// ─── Inventory tracking type ──────────────────────────────────────────────────
+
+export const TRACKING_TYPE_COLORS: Record<string, { label: string; bg: string; color: string }> = {
+  serialized: { label: 'Serialized', bg: 'bg-indigo-100', color: 'text-indigo-700' },
+  bulk:       { label: 'Bulk',       bg: 'bg-slate-100',  color: 'text-slate-600' },
+}
+
+export function getTrackingTypeClass(type: string): string {
+  return lookupClass(TRACKING_TYPE_COLORS, type)
+}
+
+// ─── Order status helpers (proxy to canonical ORDER_STATUS_CONFIG) ────────────
+
+export function getOrderStatusClass(status: string): string {
+  const cfg = ORDER_STATUS_CONFIG[status as OrderStatus]
+  return cfg ? combinedClass(cfg) : combinedClass(FALLBACK)
+}
+
+export function getOrderStatusLabel(status: string): string {
+  return ORDER_STATUS_CONFIG[status as OrderStatus]?.label ?? status
+}
+
+// ─── Invoice status helpers (proxy to canonical INVOICE_STATUS_CONFIG) ────────
+
+export function getInvoiceStatusClass(status: string): string {
+  const cfg = INVOICE_STATUS_CONFIG[status as InvoiceStatus]
+  return cfg ? combinedClass(cfg) : combinedClass(FALLBACK)
+}
+
+export function getInvoiceStatusLabel(status: string): string {
+  return INVOICE_STATUS_CONFIG[status as InvoiceStatus]?.label ?? status
 }
 
 // ─── Dispatch stage helper ────────────────────────────────────────────────────
