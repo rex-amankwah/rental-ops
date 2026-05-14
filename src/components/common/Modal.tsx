@@ -9,7 +9,8 @@ interface ModalProps {
   children: ReactNode
   footer?: ReactNode
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'
-  preventBackdropClose?: boolean
+  /** Opt in to closing on backdrop click. Default false — modals never close from window/tab switching. */
+  allowBackdropClose?: boolean
 }
 
 const SIZE_MAP = {
@@ -20,7 +21,7 @@ const SIZE_MAP = {
   '2xl': 'max-w-2xl',
 }
 
-export default function Modal({ open, onClose, title, subtitle, children, footer, size = 'md', preventBackdropClose = false }: ModalProps) {
+export default function Modal({ open, onClose, title, subtitle, children, footer, size = 'md', allowBackdropClose = false }: ModalProps) {
   // Close on Escape
   useEffect(() => {
     if (!open) return
@@ -40,10 +41,10 @@ export default function Modal({ open, onClose, title, subtitle, children, footer
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop — inert when preventBackdropClose is set */}
+      {/* Backdrop — closes modal only when explicitly opted in */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={preventBackdropClose ? undefined : onClose}
+        onClick={allowBackdropClose ? onClose : undefined}
       />
 
       {/* Panel */}

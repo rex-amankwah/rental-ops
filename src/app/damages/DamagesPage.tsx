@@ -122,7 +122,6 @@ function NewDamageModal({ open, onClose, onSuccess }: {
     <Modal
       open={open}
       onClose={onClose}
-      preventBackdropClose
       title="New Damage Report"
       subtitle="Record a damage incident against an order or item"
       size="lg"

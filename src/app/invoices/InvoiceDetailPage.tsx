@@ -121,7 +121,6 @@ function RecordPaymentModal({
     <Modal
       open={open}
       onClose={onClose}
-      preventBackdropClose
       title="Record Payment"
       subtitle={`Invoice ${invoice.invoice_number}`}
       footer={
