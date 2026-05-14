@@ -53,24 +53,37 @@ export default function NewDispatchPage() {
 
   const [form, setForm] = useState<DispatchDraft>(loadDraft() ?? BLANK)
   const [orders, setOrders] = useState<RentalOrder[]>([])
+  const [dispatchedOrderIds, setDispatchedOrderIds] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => { saveDraft(form) }, [form])
 
-  // Load eligible orders on mount
+  // Load eligible orders and existing active dispatches on mount
   useEffect(() => {
     if (!profile?.company_id) return
+
+    // Fetch orders eligible for dispatch (includes awaiting_deposit in case of partial/full pay)
     supabase.from('rental_orders')
       .select(`id, order_number, event_name, event_date, status,
         venue_name, venue_address, venue_city, venue_state, venue_zip,
         delivery_date, pickup_date,
         customer:customers(first_name, last_name)`)
       .eq('company_id', profile.company_id)
-      .in('status', ['confirmed', 'inventory_reserved', 'scheduled_for_dispatch'])
+      .in('status', ['awaiting_deposit', 'confirmed', 'inventory_reserved', 'scheduled_for_dispatch'])
       .order('event_date')
-      .limit(50)
+      .limit(100)
       .then(({ data }) => setOrders((data as RentalOrder[] | null) ?? []))
+
+    // Fetch order_ids that already have an active (non-cancelled) dispatch
+    supabase.from('dispatches')
+      .select('order_id')
+      .eq('company_id', profile.company_id)
+      .neq('status', 'cancelled')
+      .then(({ data }) => {
+        const ids = new Set<string>((data ?? []).map((d: { order_id: string }) => d.order_id))
+        setDispatchedOrderIds(ids)
+      })
   }, [profile?.company_id])
 
   // Auto-fill address from selected order
@@ -163,13 +176,20 @@ export default function NewDispatchPage() {
               <option value="">Select order…</option>
               {orders.map(o => {
                 const c = (o as unknown as { customer: { first_name: string; last_name: string } | null }).customer
+                const hasDispatch = dispatchedOrderIds.has(o.id)
                 return (
                   <option key={o.id} value={o.id}>
-                    {o.order_number} — {c ? `${c.first_name} ${c.last_name}` : 'No customer'} · {formatDate(o.event_date)}
+                    {hasDispatch ? '⚠ ' : ''}{o.order_number} — {c ? `${c.first_name} ${c.last_name}` : 'No customer'} · {formatDate(o.event_date)}{hasDispatch ? ' (dispatch exists)' : ''}
                   </option>
                 )
               })}
             </SelectField>
+            {form.order_id && dispatchedOrderIds.has(form.order_id) && (
+              <div className="col-span-2 alert alert-warning">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                <span>This order already has an active dispatch. Creating another will result in a duplicate.</span>
+              </div>
+            )}
 
             <SelectField label="Dispatch Type"
               value={form.dispatch_type}

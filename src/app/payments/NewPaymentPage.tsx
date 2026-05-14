@@ -131,6 +131,53 @@ export default function NewPaymentPage() {
           status:      newStatus,
           ...(newBalance <= 0 ? { paid_at: new Date().toISOString() } : {}),
         }).eq('id', invoice.id)
+
+        // When invoice becomes fully paid, ensure order is dispatch-ready
+        if (newBalance <= 0 && invoice.order_id) {
+          // Advance order out of awaiting_deposit so it shows on the dispatch board
+          await supabase.from('rental_orders')
+            .update({ status: 'confirmed' })
+            .eq('id', invoice.order_id)
+            .eq('company_id', profile.company_id)
+            .in('status', ['awaiting_deposit'])
+
+          // Auto-create a dispatch only if none exists for this order
+          const { data: existing } = await supabase
+            .from('dispatches')
+            .select('id')
+            .eq('order_id', invoice.order_id)
+            .neq('status', 'cancelled')
+            .limit(1)
+
+          if (!existing || existing.length === 0) {
+            const { data: ord } = await supabase
+              .from('rental_orders')
+              .select('venue_address,venue_city,venue_state,venue_zip,delivery_date,delivery_time,pickup_date,pickup_time,status')
+              .eq('id', invoice.order_id)
+              .single()
+
+            if (ord) {
+              await supabase.from('dispatches').insert({
+                company_id:              profile.company_id,
+                order_id:                invoice.order_id,
+                dispatch_type:           'both',
+                status:                  'scheduled',
+                scheduled_delivery_date: ord.delivery_date ?? null,
+                scheduled_delivery_time: ord.delivery_time ?? null,
+                scheduled_pickup_date:   ord.pickup_date   ?? null,
+                delivery_address:        ord.venue_address ?? null,
+                delivery_city:           ord.venue_city    ?? null,
+                delivery_state:          ord.venue_state   ?? null,
+                delivery_zip:            ord.venue_zip     ?? null,
+              })
+              // Mark order as scheduled for dispatch
+              await supabase.from('rental_orders')
+                .update({ status: 'scheduled_for_dispatch' })
+                .eq('id', invoice.order_id)
+                .in('status', ['confirmed', 'inventory_reserved'])
+            }
+          }
+        }
       }
 
       clearDraft(invoiceId)

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Send,
-  Plus, Printer, DollarSign, Loader2
+  Plus, Printer, DollarSign, Loader2, Mail, X, Info
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -26,6 +26,7 @@ export default function InvoiceDetailPage() {
   const [invoice, setInvoice] = useState<FullInvoice | null>(null)
   const [loading, setLoading] = useState(true)
   const [statusSaving, setStatusSaving] = useState(false)
+  const [receiptNotice, setReceiptNotice] = useState(false)
 
   const load = useCallback(async () => {
     if (!id || !profile?.company_id) return
@@ -106,10 +107,18 @@ export default function InvoiceDetailPage() {
             </button>
           )}
           {isPaid && (
-            <button onClick={() => window.print()} className="btn-primary">
-              <Printer className="w-4 h-4" />
-              Print Receipt
-            </button>
+            <>
+              {customer?.email && (
+                <button onClick={() => setReceiptNotice(true)} className="btn-secondary">
+                  <Mail className="w-4 h-4" />
+                  Send Receipt
+                </button>
+              )}
+              <button onClick={() => window.print()} className="btn-primary">
+                <Printer className="w-4 h-4" />
+                Print Receipt
+              </button>
+            </>
           )}
           {invoice.status === 'draft' && (
             <button onClick={markSent} disabled={statusSaving} className="btn-secondary">
@@ -122,6 +131,21 @@ export default function InvoiceDetailPage() {
           </button>
         </div>
       </div>
+
+      {/* Send Receipt placeholder notice */}
+      {receiptNotice && (
+        <div className="alert alert-info no-print">
+          <Info className="w-4 h-4 flex-shrink-0" />
+          <span>
+            Receipt email is not connected yet.
+            {customer?.email && <> Customer email on file: <strong>{customer.email}</strong>.</>}
+            {' '}Use <strong>Print Receipt</strong> to generate a PDF to share manually.
+          </span>
+          <button onClick={() => setReceiptNotice(false)} className="ml-auto btn-ghost p-1 flex-shrink-0">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Invoice document */}
       <div className="bg-card rounded-xl border border-border overflow-hidden print:shadow-none">
