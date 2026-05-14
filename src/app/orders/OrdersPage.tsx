@@ -150,7 +150,7 @@ export default function OrdersPage() {
     },
     {
       key: 'total_amount',
-      label: 'Total',
+      label: 'Total / Due',
       sortable: true,
       align: 'right' as const,
       width: '120px',
