@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { canEdit } from '@/lib/roles'
 import { PageShell, StatCard } from '@/components/common/PageShell'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { formatCurrency, formatDate } from '@/lib/constants'
@@ -148,6 +149,7 @@ function useDashboardMetrics() {
 export default function DashboardPage() {
   const { profile } = useAuth()
   const navigate = useNavigate()
+  const { appRole } = useAuth()
   const { metrics, loading } = useDashboardMetrics()
 
   const greeting = (() => {
@@ -405,22 +407,26 @@ export default function DashboardPage() {
               Quick Actions
             </h3>
             <div className="grid grid-cols-2 gap-2">
-              {/* New Order - real route */}
-              <Link
-                to="/orders/new"
-                className="flex items-center gap-2 p-2.5 bg-card rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition-colors text-xs font-medium text-foreground"
-              >
-                <FileText className="w-3.5 h-3.5 text-primary" />
-                New Order
-              </Link>
-              {/* New Customer - go to customers page where modal lives */}
-              <Link
-                to="/customers"
-                className="flex items-center gap-2 p-2.5 bg-card rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition-colors text-xs font-medium text-foreground"
-              >
-                <Users className="w-3.5 h-3.5 text-primary" />
-                New Customer
-              </Link>
+              {/* New Order — staff/admin only */}
+              {canEdit(appRole) && (
+                <Link
+                  to="/orders/new"
+                  className="flex items-center gap-2 p-2.5 bg-card rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition-colors text-xs font-medium text-foreground"
+                >
+                  <FileText className="w-3.5 h-3.5 text-primary" />
+                  New Order
+                </Link>
+              )}
+              {/* New Customer — staff/admin only */}
+              {canEdit(appRole) && (
+                <Link
+                  to="/customers/new"
+                  className="flex items-center gap-2 p-2.5 bg-card rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition-colors text-xs font-medium text-foreground"
+                >
+                  <Users className="w-3.5 h-3.5 text-primary" />
+                  New Customer
+                </Link>
+              )}
               {/* Invoices - generated from order detail */}
               <Link
                 to="/invoices"

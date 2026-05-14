@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Plus, Receipt, AlertTriangle, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { canEdit } from '@/lib/roles'
 import { PageShell, PageHeader, TableCard } from '@/components/common/PageShell'
 import { EXPENSE_CATEGORIES, formatCurrency, formatDate } from '@/lib/constants'
 
@@ -30,7 +31,7 @@ const CATEGORY_STYLE: Record<string, string> = {
 }
 
 export default function ExpensesPage() {
-  const { profile } = useAuth()
+  const { profile, appRole } = useAuth()
   const navigate = useNavigate()
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
@@ -67,11 +68,11 @@ export default function ExpensesPage() {
       <PageHeader
         title="Expenses"
         subtitle={loading ? '—' : `${expenses.length} expense${expenses.length !== 1 ? 's' : ''} · ${formatCurrency(total)} total`}
-        actions={
+        actions={canEdit(appRole) ? (
           <button onClick={() => navigate('/expenses/new')} className="btn-primary">
             <Plus className="w-4 h-4" /> New Expense
           </button>
-        }
+        ) : undefined}
       />
 
       {fetchError && (
@@ -113,9 +114,11 @@ export default function ExpensesPage() {
           <p className="text-sm text-muted-foreground mb-4 max-w-xs">
             Track labor, fuel, repairs, and other operational costs here.
           </p>
-          <button onClick={() => navigate('/expenses/new')} className="btn-primary">
-            <Plus className="w-4 h-4" /> Record First Expense
-          </button>
+          {canEdit(appRole) && (
+            <button onClick={() => navigate('/expenses/new')} className="btn-primary">
+              <Plus className="w-4 h-4" /> Record First Expense
+            </button>
+          )}
         </div>
       ) : (
         <TableCard>

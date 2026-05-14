@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useAvailability } from '@/hooks/useAvailability'
 import { StatusBadge, PriorityBadge } from '@/components/common/StatusBadge'
 import { formatCurrency, formatDate, ORDER_STATUS_CONFIG } from '@/lib/constants'
+import { canEdit } from '@/lib/roles'
 import type { RentalOrder, Customer, OrderItem, Invoice, Payment, ActivityLog } from '@/types/database'
 
 type FullOrder = RentalOrder & {
@@ -23,7 +24,7 @@ type FullOrder = RentalOrder & {
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { profile } = useAuth()
+  const { profile, appRole } = useAuth()
   const { reserveItems, releaseReservations } = useAvailability()
   const [order, setOrder] = useState<FullOrder | null>(null)
   const [loading, setLoading] = useState(true)
@@ -196,40 +197,40 @@ export default function OrderDetailPage() {
           )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Edit order */}
-          {!['cancelled', 'refunded', 'closed', 'completed'].includes(order.status) && (
+          {/* Edit order — staff/admin only */}
+          {canEdit(appRole) && !['cancelled', 'refunded', 'closed', 'completed'].includes(order.status) && (
             <button onClick={() => navigate(`/orders/${order.id}/edit`)} className="btn-secondary">
               <Pencil className="w-3.5 h-3.5" /> Edit
             </button>
           )}
-          {/* Reserve inventory */}
-          {order.order_items?.length > 0 && ['confirmed','awaiting_deposit','quote_sent','inquiry'].includes(order.status) && (
+          {/* Reserve inventory — staff/admin only */}
+          {canEdit(appRole) && order.order_items?.length > 0 && ['confirmed','awaiting_deposit','quote_sent','inquiry'].includes(order.status) && (
             <button onClick={() => handleReserve(false)} disabled={reserving} className="btn-primary">
               {reserving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
               Reserve Inventory
             </button>
           )}
-          {/* Release reservation */}
-          {order.status === 'inventory_reserved' && (
+          {/* Release reservation — staff/admin only */}
+          {canEdit(appRole) && order.status === 'inventory_reserved' && (
             <button onClick={handleRelease} disabled={reserving} className="btn-secondary">
               {reserving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
               Release Reservation
             </button>
           )}
-          {/* Generate invoice */}
-          {order.order_items?.length > 0 && !['cancelled','refunded','closed'].includes(order.status) && (
+          {/* Generate invoice — staff/admin only */}
+          {canEdit(appRole) && order.order_items?.length > 0 && !['cancelled','refunded','closed'].includes(order.status) && (
             <button onClick={handleGenerateInvoice} disabled={invoicing} className="btn-secondary">
               {invoicing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
               Generate Invoice
             </button>
           )}
-          {/* Dispatch action */}
+          {/* Dispatch: View Dispatch is read-only (all roles); Send to Dispatch is staff/admin only */}
           {activeDispatch ? (
             <button onClick={() => navigate('/dispatch')} className="btn-secondary">
               <Truck className="w-3.5 h-3.5" />
               View Dispatch
             </button>
-          ) : ['confirmed', 'inventory_reserved', 'awaiting_deposit'].includes(order.status) && (
+          ) : canEdit(appRole) && ['confirmed', 'inventory_reserved', 'awaiting_deposit'].includes(order.status) && (
             <button onClick={() => navigate(`/dispatch/new?orderId=${order.id}`)} className="btn-primary">
               <Truck className="w-3.5 h-3.5" />
               Send to Dispatch

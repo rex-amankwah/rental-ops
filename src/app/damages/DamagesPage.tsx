@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, Plus, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { canEdit } from '@/lib/roles'
 import { PageShell, PageHeader, TableCard } from '@/components/common/PageShell'
 import { formatDate } from '@/lib/constants'
 
@@ -38,7 +39,7 @@ const STATUS_STYLE: Record<string, string> = {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function DamagesPage() {
-  const { profile } = useAuth()
+  const { profile, appRole } = useAuth()
   const navigate = useNavigate()
   const [reports, setReports] = useState<DamageReport[]>([])
   const [loading, setLoading] = useState(true)
@@ -71,12 +72,12 @@ export default function DamagesPage() {
       <PageHeader
         title="Damage Reports"
         subtitle={`${reports.length} report${reports.length !== 1 ? 's' : ''}`}
-        actions={
+        actions={canEdit(appRole) ? (
           <button onClick={() => navigate('/damages/new')} className="btn-primary">
             <Plus className="w-4 h-4" />
             New Damage Report
           </button>
-        }
+        ) : undefined}
       />
 
       {fetchError && (
@@ -99,10 +100,12 @@ export default function DamagesPage() {
           <p className="text-sm text-muted-foreground mb-4 max-w-xs">
             Damage reports are created automatically when recording returns with damaged items, or manually here.
           </p>
-          <button onClick={() => navigate('/damages/new')} className="btn-primary">
-            <Plus className="w-4 h-4" />
-            New Damage Report
-          </button>
+          {canEdit(appRole) && (
+            <button onClick={() => navigate('/damages/new')} className="btn-primary">
+              <Plus className="w-4 h-4" />
+              New Damage Report
+            </button>
+          )}
         </div>
       ) : (
         <TableCard>

@@ -30,6 +30,7 @@ import NewExpensePage from '@/app/expenses/NewExpensePage'
 import CalendarPage from '@/app/calendar/CalendarPage'
 import ReportsPage from '@/app/reports/ReportsPage'
 import PlaceholderPage from '@/components/common/PlaceholderPage'
+import RoleGuard from '@/components/common/RoleGuard'
 
 function LoadingScreen() {
   return (
@@ -117,38 +118,38 @@ function AppRoutes() {
         <Route index element={<DashboardPage />} />
 
         <Route path="orders" element={<OrdersPage />} />
-        <Route path="orders/new" element={<NewOrderPage />} />
+        <Route path="orders/new" element={<RoleGuard require="staff"><NewOrderPage /></RoleGuard>} />
         <Route path="orders/:id" element={<OrderDetailPage />} />
-        <Route path="orders/:id/edit" element={<EditOrderPage />} />
+        <Route path="orders/:id/edit" element={<RoleGuard require="staff"><EditOrderPage /></RoleGuard>} />
 
         <Route path="customers" element={<CustomersPage />} />
-        <Route path="customers/new" element={<NewCustomerPage />} />
+        <Route path="customers/new" element={<RoleGuard require="staff"><NewCustomerPage /></RoleGuard>} />
         <Route path="customers/:id" element={<CustomerDetailPage />} />
-        <Route path="customers/:id/edit" element={<EditCustomerPage />} />
+        <Route path="customers/:id/edit" element={<RoleGuard require="staff"><EditCustomerPage /></RoleGuard>} />
 
         <Route path="inventory" element={<InventoryPage />} />
-        <Route path="inventory/new" element={<NewInventoryPage />} />
-        <Route path="inventory/:id/edit" element={<EditInventoryPage />} />
+        <Route path="inventory/new" element={<RoleGuard require="staff"><NewInventoryPage /></RoleGuard>} />
+        <Route path="inventory/:id/edit" element={<RoleGuard require="staff"><EditInventoryPage /></RoleGuard>} />
 
         <Route path="invoices" element={<InvoicesPage />} />
         <Route path="invoices/:id" element={<InvoiceDetailPage />} />
 
         <Route path="payments" element={<PaymentsPage />} />
-        <Route path="payments/new" element={<NewPaymentPage />} />
+        <Route path="payments/new" element={<RoleGuard require="staff"><NewPaymentPage /></RoleGuard>} />
 
         <Route path="dispatch" element={<DispatchPage />} />
-        <Route path="dispatch/new" element={<NewDispatchPage />} />
+        <Route path="dispatch/new" element={<RoleGuard require="staff"><NewDispatchPage /></RoleGuard>} />
 
         <Route path="returns" element={<ReturnsPage />} />
-        <Route path="returns/new" element={<NewReturnPage />} />
+        <Route path="returns/new" element={<RoleGuard require="staff"><NewReturnPage /></RoleGuard>} />
 
         <Route path="calendar"    element={<CalendarPage />} />
         <Route path="damages"     element={<DamagesPage />} />
-        <Route path="damages/new" element={<NewDamagePage />} />
+        <Route path="damages/new" element={<RoleGuard require="staff"><NewDamagePage /></RoleGuard>} />
         <Route path="expenses"    element={<ExpensesPage />} />
-        <Route path="expenses/new" element={<NewExpensePage />} />
+        <Route path="expenses/new" element={<RoleGuard require="staff"><NewExpensePage /></RoleGuard>} />
         <Route path="reports"   element={<ReportsPage />} />
-        <Route path="settings"  element={<PlaceholderPage title="Settings" description="Company settings and configuration" icon="Settings" />} />
+        <Route path="settings"  element={<RoleGuard require="admin"><PlaceholderPage title="Settings" description="Company settings and configuration" icon="Settings" /></RoleGuard>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

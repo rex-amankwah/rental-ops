@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { canEdit } from '@/lib/roles'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { formatCurrency, formatDate } from '@/lib/constants'
 import type { Invoice, InvoiceItem, Customer, RentalOrder, Payment } from '@/types/database'
@@ -22,7 +23,7 @@ type FullInvoice = Invoice & {
 export default function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { profile } = useAuth()
+  const { profile, appRole } = useAuth()
   const [invoice, setInvoice] = useState<FullInvoice | null>(null)
   const [loading, setLoading] = useState(true)
   const [statusSaving, setStatusSaving] = useState(false)
@@ -100,7 +101,7 @@ export default function InvoiceDetailPage() {
           {order && <p className="text-sm text-muted-foreground mt-0.5">{order.order_number} · {order.event_name}</p>}
         </div>
         <div className="flex items-center gap-2">
-          {!isPaid && !isVoided && (
+          {!isPaid && !isVoided && canEdit(appRole) && (
             <button onClick={() => navigate(`/payments/new?invoiceId=${invoice.id}`)} className="btn-primary">
               <Plus className="w-4 h-4" />
               Record Payment
@@ -120,7 +121,7 @@ export default function InvoiceDetailPage() {
               </button>
             </>
           )}
-          {invoice.status === 'draft' && (
+          {invoice.status === 'draft' && canEdit(appRole) && (
             <button onClick={markSent} disabled={statusSaving} className="btn-secondary">
               {statusSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               Mark Sent
@@ -277,7 +278,7 @@ export default function InvoiceDetailPage() {
       )}
 
       {/* Actions — hidden in print */}
-      {!isPaid && !isVoided && (
+      {!isPaid && !isVoided && canEdit(appRole) && (
         <div className="flex justify-end no-print">
           <button onClick={voidInvoice} disabled={statusSaving} className="btn-ghost text-red-600 hover:text-red-700">
             Void Invoice

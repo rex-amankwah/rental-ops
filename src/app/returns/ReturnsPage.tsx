@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { RotateCcw, Plus, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { canEdit } from '@/lib/roles'
 import { PageShell, PageHeader, TableCard } from '@/components/common/PageShell'
 import { formatDate } from '@/lib/constants'
 import type { RentalOrder, Customer } from '@/types/database'
@@ -18,7 +19,7 @@ type ReturnWithOrder = {
 }
 
 export default function ReturnsPage() {
-  const { profile } = useAuth()
+  const { profile, appRole } = useAuth()
   const navigate = useNavigate()
   const [returns, setReturns] = useState<ReturnWithOrder[]>([])
   const [loading, setLoading] = useState(true)
@@ -46,12 +47,12 @@ export default function ReturnsPage() {
       <PageHeader
         title="Returns"
         subtitle={`${returns.length} return record${returns.length !== 1 ? 's' : ''}`}
-        actions={
+        actions={canEdit(appRole) ? (
           <button onClick={() => navigate('/returns/new')} className="btn-primary">
             <Plus className="w-4 h-4" />
             Record Return
           </button>
-        }
+        ) : undefined}
       />
 
       {loading ? (
@@ -67,9 +68,11 @@ export default function ReturnsPage() {
           <p className="text-sm text-muted-foreground mb-4 max-w-xs">
             Record returns when rental items come back from events.
           </p>
-          <button onClick={() => navigate('/returns/new')} className="btn-primary">
-            <Plus className="w-4 h-4" /> Record First Return
-          </button>
+          {canEdit(appRole) && (
+            <button onClick={() => navigate('/returns/new')} className="btn-primary">
+              <Plus className="w-4 h-4" /> Record First Return
+            </button>
+          )}
         </div>
       ) : (
         <TableCard>

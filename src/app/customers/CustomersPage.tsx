@@ -6,10 +6,11 @@ import { useAuth } from '@/hooks/useAuth'
 import { PageShell, PageHeader, TableCard, TableToolbar } from '@/components/common/PageShell'
 import { DataTable } from '@/components/common/DataTable'
 import { formatCurrency, formatDate } from '@/lib/constants'
+import { canEdit } from '@/lib/roles'
 import type { Customer } from '@/types/database'
 
 export default function CustomersPage() {
-  const { profile } = useAuth()
+  const { profile, appRole } = useAuth()
   const navigate = useNavigate()
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
@@ -155,12 +156,12 @@ export default function CustomersPage() {
       <PageHeader
         title="Customers"
         subtitle={`${total} total customer${total !== 1 ? 's' : ''}`}
-        actions={
+        actions={canEdit(appRole) ? (
           <button onClick={() => navigate('/customers/new')} className="btn-primary">
             <Plus className="w-4 h-4" />
             New Customer
           </button>
-        }
+        ) : undefined}
       />
 
       <TableCard>
@@ -202,10 +203,12 @@ export default function CustomersPage() {
           <p className="text-sm text-muted-foreground mb-4 max-w-xs">
             Add customers to start creating orders and tracking rental history.
           </p>
-          <button onClick={() => navigate('/customers/new')} className="btn-primary">
-            <Plus className="w-4 h-4" />
-            Add First Customer
-          </button>
+          {canEdit(appRole) && (
+            <button onClick={() => navigate('/customers/new')} className="btn-primary">
+              <Plus className="w-4 h-4" />
+              Add First Customer
+            </button>
+          )}
         </div>
       )}
 

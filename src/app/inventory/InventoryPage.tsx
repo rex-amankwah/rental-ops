@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { PageShell, PageHeader, TableCard, TableToolbar, StatCard } from '@/components/common/PageShell'
 import { DataTable } from '@/components/common/DataTable'
 import { INVENTORY_CATEGORIES } from '@/lib/constants'
+import { canEdit } from '@/lib/roles'
 import type { InventoryCatalogItem } from '@/types/database'
 
 // ─── Availability bar ────────────────────────────────────────────────────────
@@ -25,7 +26,7 @@ function AvailabilityBar({ available, owned }: { available: number; owned: numbe
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function InventoryPage() {
-  const { profile } = useAuth()
+  const { profile, appRole } = useAuth()
   const navigate = useNavigate()
   const [items, setItems] = useState<InventoryCatalogItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -134,11 +135,11 @@ export default function InventoryPage() {
       <PageHeader
         title="Inventory Catalog"
         subtitle={`${total} item type${total !== 1 ? 's' : ''}`}
-        actions={
+        actions={canEdit(appRole) ? (
           <button onClick={() => navigate('/inventory/new')} className="btn-primary">
             <Plus className="w-4 h-4" /> Add Item
           </button>
-        }
+        ) : undefined}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -213,9 +214,11 @@ export default function InventoryPage() {
           <p className="text-sm text-muted-foreground mb-4 max-w-xs">
             Build your catalog with chairs, tables, tents, canopies, and all your rental items.
           </p>
-          <button onClick={() => navigate('/inventory/new')} className="btn-primary">
-            <Plus className="w-4 h-4" /> Add First Item
-          </button>
+          {canEdit(appRole) && (
+            <button onClick={() => navigate('/inventory/new')} className="btn-primary">
+              <Plus className="w-4 h-4" /> Add First Item
+            </button>
+          )}
         </div>
       )}
 
@@ -230,12 +233,14 @@ export default function InventoryPage() {
                 {selectedItem.sku && <p className="text-xs text-muted-foreground font-mono mt-0.5">{selectedItem.sku}</p>}
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
-                <button
-                  onClick={() => { setSelectedItem(null); navigate(`/inventory/${selectedItem.id}/edit`) }}
-                  className="btn-secondary text-xs px-2.5 py-1.5 h-auto"
-                >
-                  <Pencil className="w-3 h-3" /> Edit
-                </button>
+                {canEdit(appRole) && (
+                  <button
+                    onClick={() => { setSelectedItem(null); navigate(`/inventory/${selectedItem.id}/edit`) }}
+                    className="btn-secondary text-xs px-2.5 py-1.5 h-auto"
+                  >
+                    <Pencil className="w-3 h-3" /> Edit
+                  </button>
+                )}
                 <button onClick={() => setSelectedItem(null)} className="btn-ghost p-1.5"><X className="w-4 h-4" /></button>
               </div>
             </div>

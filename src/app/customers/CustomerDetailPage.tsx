@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { canEdit } from '@/lib/roles'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { formatCurrency, formatDate } from '@/lib/constants'
 import type { Customer, RentalOrder } from '@/types/database'
@@ -13,7 +14,7 @@ import type { Customer, RentalOrder } from '@/types/database'
 export default function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { profile } = useAuth()
+  const { profile, appRole } = useAuth()
   const [customer, setCustomer] = useState<Customer | null>(null)
   const [orders, setOrders] = useState<RentalOrder[]>([])
   const [loading, setLoading] = useState(true)
@@ -118,9 +119,11 @@ export default function CustomerDetailPage() {
             </div>
           </div>
         </div>
-        <button onClick={() => navigate(`/customers/${customer.id}/edit`)} className="btn-secondary">
-          <Pencil className="w-3.5 h-3.5" /> Edit
-        </button>
+        {canEdit(appRole) && (
+          <button onClick={() => navigate(`/customers/${customer.id}/edit`)} className="btn-secondary">
+            <Pencil className="w-3.5 h-3.5" /> Edit
+          </button>
+        )}
       </div>
 
       {/* Summary cards */}
@@ -248,10 +251,12 @@ export default function CustomerDetailPage() {
             <Calendar className="w-4 h-4 text-muted-foreground" />
             Order History
           </h3>
-          <Link to="/orders/new" className="btn-primary text-xs h-8 px-3">
-            <ClipboardList className="w-3.5 h-3.5" />
-            New Order
-          </Link>
+          {canEdit(appRole) && (
+            <Link to="/orders/new" className="btn-primary text-xs h-8 px-3">
+              <ClipboardList className="w-3.5 h-3.5" />
+              New Order
+            </Link>
+          )}
         </div>
 
         {orders.length === 0 ? (

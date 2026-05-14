@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import Modal from '@/components/common/Modal'
 import { formatDate, formatCurrency, DISPATCH_STATUS_CONFIG } from '@/lib/constants'
+import { canEdit } from '@/lib/roles'
 import type { Dispatch, RentalOrder, Customer } from '@/types/database'
 import type { DispatchStatus } from '@/types/database'
 
@@ -59,11 +60,12 @@ function formatTime(t: string | null | undefined) {
 // ─── Dispatch card ───────────────────────────────────────────────────────────
 
 function DispatchCard({
-  dispatch, onAdvance, onOpen
+  dispatch, onAdvance, onOpen, readOnly
 }: {
   dispatch: DispatchWithOrder
   onAdvance: (id: string, nextStatus: DispatchStatus) => Promise<void>
   onOpen: (d: DispatchWithOrder) => void
+  readOnly?: boolean
 }) {
   const order = dispatch.order as unknown as (RentalOrder & { customer: Customer | null }) | null
   const customer = order?.customer as unknown as Customer | null
@@ -157,7 +159,7 @@ function DispatchCard({
       )}
 
       {/* Advance button */}
-      {next && (
+      {next && !readOnly && (
         <button
           onClick={advance}
           disabled={advancing}
@@ -175,7 +177,7 @@ function DispatchCard({
 // ─── Main page ───────────────────────────────────────────────────────────────
 
 export default function DispatchPage() {
-  const { profile } = useAuth()
+  const { profile, appRole } = useAuth()
   const navigate = useNavigate()
   const [dispatches, setDispatches] = useState<DispatchWithOrder[]>([])
   const [loading, setLoading] = useState(true)
@@ -278,10 +280,12 @@ export default function DispatchPage() {
           >
             <Settings className="w-4 h-4" />
           </button>
-          <button onClick={() => navigate('/dispatch/new')} className="btn-primary">
-            <Plus className="w-4 h-4" />
-            New Dispatch
-          </button>
+          {canEdit(appRole) && (
+            <button onClick={() => navigate('/dispatch/new')} className="btn-primary">
+              <Plus className="w-4 h-4" />
+              New Dispatch
+            </button>
+          )}
         </div>
       </div>
 
@@ -348,6 +352,7 @@ export default function DispatchPage() {
                         dispatch={d}
                         onAdvance={advanceStatus}
                         onOpen={(dispatch: DispatchWithOrder) => setSelectedDispatch(dispatch)}
+                        readOnly={!canEdit(appRole)}
                       />
                     </div>
                   ))}
@@ -378,6 +383,7 @@ export default function DispatchPage() {
                         dispatch={d}
                         onAdvance={advanceStatus}
                         onOpen={(dispatch: DispatchWithOrder) => setSelectedDispatch(dispatch)}
+                        readOnly={!canEdit(appRole)}
                       />
                     </div>
                   ))}

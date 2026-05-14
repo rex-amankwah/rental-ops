@@ -7,6 +7,7 @@ import { PageShell, PageHeader, TableCard, TableToolbar } from '@/components/com
 import { DataTable } from '@/components/common/DataTable'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { formatCurrency, formatDate, ORDER_STATUS_CONFIG } from '@/lib/constants'
+import { canEdit } from '@/lib/roles'
 import type { RentalOrder, Customer, OrderStatus } from '@/types/database'
 
 type OrderWithCustomer = RentalOrder & { customer: Customer | null }
@@ -46,7 +47,7 @@ const DISPATCH_BADGE: Record<string, { label: string; cls: string }> = {
 }
 
 export default function OrdersPage() {
-  const { profile } = useAuth()
+  const { profile, appRole } = useAuth()
   const navigate = useNavigate()
   const [orders, setOrders] = useState<OrderWithCustomer[]>([])
   const [loading, setLoading] = useState(true)
@@ -218,7 +219,7 @@ export default function OrdersPage() {
           )
         }
 
-        if (!DISPATCH_ELIGIBLE.has(row.status)) return null
+        if (!DISPATCH_ELIGIBLE.has(row.status) || !canEdit(appRole)) return null
         return (
           <button
             onClick={(e: MouseEvent) => { e.stopPropagation(); navigate(`/dispatch/new?orderId=${row.id}`) }}
@@ -237,12 +238,12 @@ export default function OrdersPage() {
       <PageHeader
         title="Orders"
         subtitle={`${total} total order${total !== 1 ? 's' : ''}`}
-        actions={
+        actions={canEdit(appRole) ? (
           <button onClick={() => navigate('/orders/new')} className="btn-primary">
             <Plus className="w-4 h-4" />
             New Order
           </button>
-        }
+        ) : undefined}
       />
 
       {/* Status group tabs */}
