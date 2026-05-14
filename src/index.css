@@ -80,7 +80,7 @@
   }
 
   .data-table td {
-    @apply px-4 py-3.5 border-b border-border/50;
+    @apply px-4 py-3.5 border-b border-border/50 align-middle;
   }
 
   .data-table tr:hover td {

@@ -33,6 +33,17 @@ const CLOSED_STATUSES: OrderStatus[] = [
 ]
 
 const DISPATCH_ELIGIBLE = new Set<string>(['confirmed', 'inventory_reserved', 'awaiting_deposit'])
+const TERMINAL_ORDER    = new Set<string>(['returned', 'completed', 'cancelled', 'refunded', 'closed'])
+
+const DISPATCH_BADGE: Record<string, { label: string; cls: string }> = {
+  scheduled:        { label: 'Scheduled',       cls: 'bg-blue-100 text-blue-700' },
+  loading:          { label: 'On Board',         cls: 'bg-violet-100 text-violet-700' },
+  out_for_delivery: { label: 'Out for Delivery', cls: 'bg-amber-100 text-amber-700' },
+  delivered:        { label: 'Delivered',        cls: 'bg-emerald-100 text-emerald-700' },
+  setup_done:       { label: 'Delivered',        cls: 'bg-emerald-100 text-emerald-700' },
+  pickup_pending:   { label: 'Pickup Pending',   cls: 'bg-orange-100 text-orange-700' },
+  returned:         { label: 'Returned',         cls: 'bg-muted text-muted-foreground' },
+}
 
 export default function OrdersPage() {
   const { profile } = useAuth()
@@ -45,7 +56,7 @@ export default function OrdersPage() {
   const [sortKey, setSortKey] = useState('created_at')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [total, setTotal] = useState(0)
-  const [dispatchedOrderIds, setDispatchedOrderIds] = useState<Set<string>>(new Set())
+  const [dispatchMap, setDispatchMap] = useState<Map<string, string>>(new Map())
 
   const fetchOrders = useCallback(async () => {
     if (!profile?.company_id) return
@@ -95,9 +106,13 @@ export default function OrdersPage() {
 
   useEffect(() => {
     if (!profile?.company_id) return
-    supabase.from('dispatches').select('order_id')
+    supabase.from('dispatches').select('order_id,status')
       .eq('company_id', profile.company_id).neq('status', 'cancelled')
-      .then(({ data }) => setDispatchedOrderIds(new Set((data ?? []).map(d => d.order_id as string))))
+      .then(({ data }) => {
+        const m = new Map<string, string>()
+        for (const d of data ?? []) m.set(d.order_id as string, d.status as string)
+        setDispatchMap(m)
+      })
   }, [profile?.company_id])
 
   function handleSort(key: string) {
@@ -160,7 +175,7 @@ export default function OrdersPage() {
     },
     {
       key: 'total_amount',
-      label: 'Total / Due',
+      label: 'Financials',
       sortable: true,
       align: 'right' as const,
       width: '120px',
@@ -181,24 +196,30 @@ export default function OrdersPage() {
     },
     {
       key: 'dispatch_action',
-      label: '',
-      width: '110px',
+      label: 'Dispatch',
+      width: '140px',
       render: (row: OrderWithCustomer) => {
-        if (dispatchedOrderIds.has(row.id)) {
+        // Never show dispatch state for terminal orders
+        if (TERMINAL_ORDER.has(row.status)) return null
+
+        const dispatchStatus = dispatchMap.get(row.id)
+        if (dispatchStatus) {
+          const cfg = DISPATCH_BADGE[dispatchStatus] ?? { label: dispatchStatus, cls: 'bg-muted text-muted-foreground' }
           return (
             <button
               onClick={(e: MouseEvent) => { e.stopPropagation(); navigate('/dispatch') }}
-              className="badge text-[10px] bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors cursor-pointer"
+              className={`badge text-[10px] whitespace-nowrap ${cfg.cls} hover:opacity-80 transition-opacity cursor-pointer`}
             >
-              On Board
+              {cfg.label}
             </button>
           )
         }
+
         if (!DISPATCH_ELIGIBLE.has(row.status)) return null
         return (
           <button
             onClick={(e: MouseEvent) => { e.stopPropagation(); navigate(`/dispatch/new?orderId=${row.id}`) }}
-            className="btn-secondary text-xs py-1 px-2.5 flex items-center gap-1"
+            className="btn-secondary text-xs py-1 px-2.5 flex items-center gap-1 whitespace-nowrap"
           >
             <Truck className="w-3 h-3" />
             Dispatch
