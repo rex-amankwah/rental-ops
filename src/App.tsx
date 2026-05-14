@@ -15,6 +15,7 @@ import InvoiceDetailPage from '@/app/invoices/InvoiceDetailPage'
 import PaymentsPage from '@/app/payments/PaymentsPage'
 import DispatchPage from '@/app/dispatch/DispatchPage'
 import ReturnsPage from '@/app/returns/ReturnsPage'
+import NewReturnPage from '@/app/returns/NewReturnPage'
 import DamagesPage from '@/app/damages/DamagesPage'
 import ReportsPage from '@/app/reports/ReportsPage'
 import PlaceholderPage from '@/components/common/PlaceholderPage'
@@ -118,6 +119,7 @@ function AppRoutes() {
         <Route path="payments" element={<PaymentsPage />} />
         <Route path="dispatch" element={<DispatchPage />} />
         <Route path="returns" element={<ReturnsPage />} />
+        <Route path="returns/new" element={<NewReturnPage />} />
 
         <Route path="calendar"  element={<PlaceholderPage title="Calendar" description="Event calendar view — coming in Phase 3" icon="Calendar" />} />
         <Route path="damages"   element={<DamagesPage />} />
