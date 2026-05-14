@@ -29,6 +29,7 @@ import ExpensesPage from '@/app/expenses/ExpensesPage'
 import NewExpensePage from '@/app/expenses/NewExpensePage'
 import CalendarPage from '@/app/calendar/CalendarPage'
 import ReportsPage from '@/app/reports/ReportsPage'
+import HelpPage from '@/app/help/HelpPage'
 import PlaceholderPage from '@/components/common/PlaceholderPage'
 import RoleGuard from '@/components/common/RoleGuard'
 
@@ -149,6 +150,7 @@ function AppRoutes() {
         <Route path="expenses"    element={<ExpensesPage />} />
         <Route path="expenses/new" element={<RoleGuard require="staff"><NewExpensePage /></RoleGuard>} />
         <Route path="reports"   element={<ReportsPage />} />
+        <Route path="help"      element={<HelpPage />} />
         <Route path="settings"  element={<RoleGuard require="admin"><PlaceholderPage title="Settings" description="Company settings and configuration" icon="Settings" /></RoleGuard>} />
       </Route>
 

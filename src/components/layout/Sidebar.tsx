@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, ClipboardList, Calendar, Package, Truck,
   FileText, CreditCard, Users, RotateCcw, AlertTriangle,
-  Receipt, BarChart3, Settings, Tent, ChevronRight
+  Receipt, BarChart3, Settings, Tent, ChevronRight, BookOpen
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { getInitials } from '@/lib/constants'
@@ -10,7 +10,7 @@ import { getInitials } from '@/lib/constants'
 const ICON_MAP = {
   LayoutDashboard, ClipboardList, Calendar, Package, Truck,
   FileText, CreditCard, Users, RotateCcw, AlertTriangle,
-  Receipt, BarChart3, Settings,
+  Receipt, BarChart3, Settings, BookOpen,
 }
 
 const NAV_SECTIONS = [
@@ -49,6 +49,12 @@ const NAV_SECTIONS = [
     label: 'Analytics',
     items: [
       { href: '/reports',   label: 'Reports',    icon: 'BarChart3' },
+    ],
+  },
+  {
+    label: 'Help',
+    items: [
+      { href: '/help',      label: 'User Guide', icon: 'BookOpen' },
     ],
   },
 ]
