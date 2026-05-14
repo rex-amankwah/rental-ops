@@ -103,6 +103,20 @@ export const INVENTORY_CATEGORIES = [
 ]
 
 // ============================================================
+// EXPENSE CATEGORIES
+// ============================================================
+
+export const EXPENSE_CATEGORIES = [
+  { value: 'labor',       label: 'Labor',       icon: '👷' },
+  { value: 'fuel',        label: 'Fuel',         icon: '⛽' },
+  { value: 'repair',      label: 'Repair',       icon: '🔧' },
+  { value: 'supplies',    label: 'Supplies',     icon: '📦' },
+  { value: 'transport',   label: 'Transport',    icon: '🚛' },
+  { value: 'marketing',   label: 'Marketing',    icon: '📣' },
+  { value: 'other',       label: 'Other',        icon: '💼' },
+]
+
+// ============================================================
 // PAYMENT METHODS
 // ============================================================
 

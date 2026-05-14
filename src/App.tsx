@@ -22,6 +22,9 @@ import ReturnsPage from '@/app/returns/ReturnsPage'
 import NewReturnPage from '@/app/returns/NewReturnPage'
 import DamagesPage from '@/app/damages/DamagesPage'
 import NewDamagePage from '@/app/damages/NewDamagePage'
+import ExpensesPage from '@/app/expenses/ExpensesPage'
+import NewExpensePage from '@/app/expenses/NewExpensePage'
+import CalendarPage from '@/app/calendar/CalendarPage'
 import ReportsPage from '@/app/reports/ReportsPage'
 import PlaceholderPage from '@/components/common/PlaceholderPage'
 
@@ -133,10 +136,11 @@ function AppRoutes() {
         <Route path="returns" element={<ReturnsPage />} />
         <Route path="returns/new" element={<NewReturnPage />} />
 
-        <Route path="calendar"  element={<PlaceholderPage title="Calendar" description="Event calendar view — coming in Phase 3" icon="Calendar" />} />
-        <Route path="damages"   element={<DamagesPage />} />
+        <Route path="calendar"    element={<CalendarPage />} />
+        <Route path="damages"     element={<DamagesPage />} />
         <Route path="damages/new" element={<NewDamagePage />} />
-        <Route path="expenses"  element={<PlaceholderPage title="Expenses" description="Operational expense tracking — coming in Phase 3" icon="Receipt" />} />
+        <Route path="expenses"    element={<ExpensesPage />} />
+        <Route path="expenses/new" element={<NewExpensePage />} />
         <Route path="reports"   element={<ReportsPage />} />
         <Route path="settings"  element={<PlaceholderPage title="Settings" description="Company settings and configuration" icon="Settings" />} />
       </Route>
