@@ -3,7 +3,11 @@
 // ============================================================
 import type { ReactNode } from 'react'
 
+/** Legacy DB role values — kept for reference only. App code uses AppRole. */
 export type UserRole = 'owner' | 'admin' | 'manager' | 'staff' | 'driver' | 'customer'
+
+/** Normalized 3-role system used throughout the app. */
+export type AppRole = 'admin' | 'staff' | 'viewer'
 
 export type OrderStatus =
   | 'inquiry' | 'quote_sent' | 'awaiting_deposit' | 'confirmed'
@@ -61,7 +65,7 @@ export interface Profile {
   full_name: string | null
   phone: string | null
   avatar_url: string | null
-  role: UserRole
+  role: AppRole
   is_active: boolean
   last_seen_at: string | null
   created_at: string

@@ -1,12 +1,15 @@
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
-import type { Profile, Company } from '@/types/database'
+import type { Profile, Company, AppRole } from '@/types/database'
+import { toAppRole } from '@/lib/roles'
 
 interface AuthContextValue {
   session: Session | null
   user: User | null
   profile: (Profile & { companies: Company }) | null
+  /** Normalised 3-role value — safe to use anywhere without null-checks on profile. */
+  appRole: AppRole
   loading: boolean
   error: string | null
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
@@ -163,6 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       user: session?.user ?? null,
       profile,
+      appRole: toAppRole(profile?.role),
       loading,
       error,
       signIn,
