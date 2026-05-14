@@ -30,7 +30,8 @@ import NewExpensePage from '@/app/expenses/NewExpensePage'
 import CalendarPage from '@/app/calendar/CalendarPage'
 import ReportsPage from '@/app/reports/ReportsPage'
 import HelpPage from '@/app/help/HelpPage'
-import PlaceholderPage from '@/components/common/PlaceholderPage'
+import SettingsPage from '@/app/settings/SettingsPage'
+import TeamPage from '@/app/settings/TeamPage'
 import RoleGuard from '@/components/common/RoleGuard'
 
 function LoadingScreen() {
@@ -150,8 +151,9 @@ function AppRoutes() {
         <Route path="expenses"    element={<ExpensesPage />} />
         <Route path="expenses/new" element={<RoleGuard require="staff"><NewExpensePage /></RoleGuard>} />
         <Route path="reports"   element={<ReportsPage />} />
-        <Route path="help"      element={<HelpPage />} />
-        <Route path="settings"  element={<RoleGuard require="admin"><PlaceholderPage title="Settings" description="Company settings and configuration" icon="Settings" /></RoleGuard>} />
+        <Route path="help"          element={<HelpPage />} />
+        <Route path="settings"      element={<RoleGuard require="admin"><SettingsPage /></RoleGuard>} />
+        <Route path="settings/team" element={<RoleGuard require="admin"><TeamPage /></RoleGuard>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

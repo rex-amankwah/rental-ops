@@ -5,6 +5,7 @@ import {
   Receipt, BarChart3, Settings, Tent, ChevronRight, BookOpen
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { isAdmin } from '@/lib/roles'
 import { getInitials } from '@/lib/constants'
 
 const ICON_MAP = {
@@ -60,8 +61,9 @@ const NAV_SECTIONS = [
 ]
 
 export default function Sidebar() {
-  const { profile, signOut } = useAuth()
+  const { profile, appRole, signOut } = useAuth()
   const location = useLocation()
+  const adminUser = isAdmin(appRole)
 
   function isActive(href: string) {
     if (href === '/') return location.pathname === '/'
@@ -109,29 +111,75 @@ export default function Sidebar() {
             </div>
           </div>
         ))}
+
+        {/* Admin-only Settings section */}
+        {adminUser && (
+          <div>
+            <p className="text-[10px] font-semibold text-sidebar-foreground/35 uppercase tracking-widest px-3 mb-1">
+              Settings
+            </p>
+            <div className="space-y-0.5">
+              {[
+                { href: '/settings',      label: 'Settings', icon: Settings },
+                { href: '/settings/team', label: 'Team & Roles', icon: Users },
+              ].map(({ href, label, icon: Icon }) => {
+                const active = isActive(href)
+                return (
+                  <NavLink
+                    key={href}
+                    to={href}
+                    className={`sidebar-link ${active ? 'active' : ''}`}
+                  >
+                    <Icon className="w-4 h-4 flex-shrink-0" />
+                    <span className="flex-1 truncate">{label}</span>
+                    {active && <ChevronRight className="w-3 h-3 opacity-50" />}
+                  </NavLink>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* User profile footer */}
       <div className="border-t border-sidebar-border p-3">
-        <NavLink
-          to="/settings"
-          className="flex items-center gap-2.5 p-2 rounded-md hover:bg-sidebar-accent transition-colors group"
-        >
-          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-            <span className="text-xs font-semibold text-primary">
-              {profile?.full_name ? getInitials(profile.full_name) : '?'}
-            </span>
+        {adminUser ? (
+          <NavLink
+            to="/settings"
+            className="flex items-center gap-2.5 p-2 rounded-md hover:bg-sidebar-accent transition-colors group"
+          >
+            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-xs font-semibold text-primary">
+                {profile?.full_name ? getInitials(profile.full_name) : '?'}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-sidebar-foreground truncate">
+                {profile?.full_name ?? profile?.email ?? 'User'}
+              </p>
+              <p className="text-[10px] text-sidebar-foreground/50 capitalize">
+                {profile?.role ?? 'staff'}
+              </p>
+            </div>
+            <Settings className="w-3.5 h-3.5 text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70 flex-shrink-0" />
+          </NavLink>
+        ) : (
+          <div className="flex items-center gap-2.5 p-2">
+            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-xs font-semibold text-primary">
+                {profile?.full_name ? getInitials(profile.full_name) : '?'}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-sidebar-foreground truncate">
+                {profile?.full_name ?? profile?.email ?? 'User'}
+              </p>
+              <p className="text-[10px] text-sidebar-foreground/50 capitalize">
+                {profile?.role ?? 'staff'}
+              </p>
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-sidebar-foreground truncate">
-              {profile?.full_name ?? profile?.email ?? 'User'}
-            </p>
-            <p className="text-[10px] text-sidebar-foreground/50 capitalize">
-              {profile?.role ?? 'staff'}
-            </p>
-          </div>
-          <Settings className="w-3.5 h-3.5 text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70 flex-shrink-0" />
-        </NavLink>
+        )}
         <button
           onClick={() => signOut()}
           className="w-full mt-1 text-left text-xs text-sidebar-foreground/40 hover:text-sidebar-foreground/70 px-2 py-1 transition-colors"
