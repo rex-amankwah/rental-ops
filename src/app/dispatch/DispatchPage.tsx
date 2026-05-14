@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, MouseEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Loader2, Calendar, MapPin, User } from 'lucide-react'
+import { Plus, Loader2, Calendar, MapPin, User, Clock } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import Modal from '@/components/common/Modal'
@@ -26,6 +26,18 @@ const NEXT_STATUS: Partial<Record<DispatchStatus, DispatchStatus>> = {
   pickup_pending:   'returned',
 }
 
+function dispatchTypeLabel(t: string) {
+  if (t === 'both') return 'Delivery + Pickup'
+  return t.charAt(0).toUpperCase() + t.slice(1)
+}
+
+function formatTime(t: string | null | undefined) {
+  if (!t) return null
+  const [h, m] = t.split(':')
+  const hr = parseInt(h, 10)
+  return `${hr % 12 || 12}:${m} ${hr < 12 ? 'AM' : 'PM'}`
+}
+
 // ─── Dispatch card ───────────────────────────────────────────────────────────
 
 function DispatchCard({
@@ -49,20 +61,33 @@ function DispatchCard({
     setAdvancing(false)
   }
 
+  const showDelivery = dispatch.dispatch_type === 'delivery' || dispatch.dispatch_type === 'both'
+  const showPickup   = dispatch.dispatch_type === 'pickup'   || dispatch.dispatch_type === 'both'
+
   return (
     <div
       onClick={() => onOpen(dispatch)}
       className="bg-card border border-border rounded-lg p-3 space-y-2 cursor-pointer hover:border-primary/40 hover:shadow-sm transition-all"
     >
-      {/* Order number + type */}
+      {/* Order number + status badge */}
       <div className="flex items-center justify-between gap-2">
         <span className="font-mono text-xs font-semibold text-foreground">
           {order?.order_number ?? '—'}
         </span>
         <span className={`badge text-[10px] ${cfg.bg} ${cfg.color}`}>
-          {dispatch.dispatch_type}
+          {cfg.label}
         </span>
       </div>
+
+      {/* Event name */}
+      {order?.event_name && (
+        <p className="text-xs font-medium text-foreground truncate">{order.event_name}</p>
+      )}
+
+      {/* Dispatch type */}
+      <span className="inline-block badge text-[10px] bg-muted text-muted-foreground">
+        {dispatchTypeLabel(dispatch.dispatch_type)}
+      </span>
 
       {/* Customer */}
       {customer && (
@@ -80,19 +105,33 @@ function DispatchCard({
         </div>
       )}
 
-      {/* Delivery time */}
-      {(dispatch.scheduled_delivery_date || dispatch.scheduled_pickup_date) && (
+      {/* Delivery date + time */}
+      {showDelivery && dispatch.scheduled_delivery_date && (
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Calendar className="w-3 h-3 flex-shrink-0" />
           <span>
-            {dispatch.dispatch_type === 'pickup'
-              ? formatDate(dispatch.scheduled_pickup_date)
-              : formatDate(dispatch.scheduled_delivery_date)}
+            Del: {formatDate(dispatch.scheduled_delivery_date)}
+            {dispatch.scheduled_delivery_time && (
+              <> · <Clock className="inline w-2.5 h-2.5 mx-0.5" />{formatTime(dispatch.scheduled_delivery_time)}</>
+            )}
           </span>
         </div>
       )}
 
-      {/* Driver */}
+      {/* Pickup date + time */}
+      {showPickup && dispatch.scheduled_pickup_date && (
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Calendar className="w-3 h-3 flex-shrink-0" />
+          <span>
+            Pickup: {formatDate(dispatch.scheduled_pickup_date)}
+            {dispatch.scheduled_pickup_time && (
+              <> · <Clock className="inline w-2.5 h-2.5 mx-0.5" />{formatTime(dispatch.scheduled_pickup_time)}</>
+            )}
+          </span>
+        </div>
+      )}
+
+      {/* Route notes */}
       {dispatch.route_notes && (
         <p className="text-[10px] text-muted-foreground bg-muted rounded px-1.5 py-0.5 truncate">
           {dispatch.route_notes}

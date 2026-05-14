@@ -206,6 +206,13 @@ export default function OrderDetailPage() {
               Generate Invoice
             </button>
           )}
+          {/* Send to dispatch */}
+          {!['cancelled','refunded','closed','completed','returned'].includes(order.status) && (
+            <button onClick={() => navigate(`/dispatch/new?orderId=${order.id}`)} className="btn-secondary">
+              <Truck className="w-3.5 h-3.5" />
+              Send to Dispatch
+            </button>
+          )}
         </div>
       </div>
 

@@ -212,6 +212,7 @@ export default function InvoiceDetailPage() {
 
         {/* Totals */}
         <div className="p-6 border-t border-border">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Financial Summary</p>
           <div className="ml-auto w-64 space-y-2 text-sm">
             <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(invoice.subtotal)}</span></div>
             {invoice.delivery_fee > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Delivery</span><span>{formatCurrency(invoice.delivery_fee)}</span></div>}

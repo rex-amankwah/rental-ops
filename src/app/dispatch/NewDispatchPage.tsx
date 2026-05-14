@@ -1,5 +1,5 @@
 import { useEffect, useState, ChangeEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Truck, Loader2, AlertTriangle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -50,8 +50,14 @@ function clearDraft() {
 export default function NewDispatchPage() {
   const { profile } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const preselectedOrderId = searchParams.get('orderId') ?? ''
 
-  const [form, setForm] = useState<DispatchDraft>(loadDraft() ?? BLANK)
+  const [form, setForm] = useState<DispatchDraft>(() => {
+    const draft = loadDraft()
+    if (draft) return draft
+    return { ...BLANK, order_id: preselectedOrderId }
+  })
   const [orders, setOrders] = useState<RentalOrder[]>([])
   const [dispatchedOrderIds, setDispatchedOrderIds] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState(false)
