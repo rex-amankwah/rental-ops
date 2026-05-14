@@ -7,6 +7,7 @@ import { PageShell, PageHeader, TableCard, TableToolbar } from '@/components/com
 import { DataTable } from '@/components/common/DataTable'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { formatCurrency, formatDate, ORDER_STATUS_CONFIG } from '@/lib/constants'
+import { ORDER_DISPATCH_BADGE } from '@/lib/statusColors'
 import { canEdit } from '@/lib/roles'
 import type { RentalOrder, Customer, OrderStatus } from '@/types/database'
 
@@ -35,16 +36,6 @@ const CLOSED_STATUSES: OrderStatus[] = [
 
 const DISPATCH_ELIGIBLE = new Set<string>(['confirmed', 'inventory_reserved', 'awaiting_deposit'])
 const TERMINAL_ORDER    = new Set<string>(['returned', 'completed', 'cancelled', 'refunded', 'closed'])
-
-const DISPATCH_BADGE: Record<string, { label: string; cls: string }> = {
-  scheduled:        { label: 'Scheduled',       cls: 'bg-blue-100 text-blue-700' },
-  loading:          { label: 'On Board',         cls: 'bg-violet-100 text-violet-700' },
-  out_for_delivery: { label: 'Out for Delivery', cls: 'bg-amber-100 text-amber-700' },
-  delivered:        { label: 'Delivered',        cls: 'bg-emerald-100 text-emerald-700' },
-  setup_done:       { label: 'Delivered',        cls: 'bg-emerald-100 text-emerald-700' },
-  pickup_pending:   { label: 'Pickup Pending',   cls: 'bg-orange-100 text-orange-700' },
-  returned:         { label: 'Returned',         cls: 'bg-muted text-muted-foreground' },
-}
 
 export default function OrdersPage() {
   const { profile, appRole } = useAuth()
@@ -208,11 +199,11 @@ export default function OrdersPage() {
 
         const dispatchStatus = dispatchMap.get(row.id)
         if (dispatchStatus) {
-          const cfg = DISPATCH_BADGE[dispatchStatus] ?? { label: dispatchStatus, cls: 'bg-muted text-muted-foreground' }
+          const cfg = ORDER_DISPATCH_BADGE[dispatchStatus] ?? { label: dispatchStatus, bg: 'bg-muted', color: 'text-muted-foreground' }
           return (
             <button
               onClick={(e: MouseEvent) => { e.stopPropagation(); navigate('/dispatch') }}
-              className={`badge text-[10px] whitespace-nowrap ${cfg.cls} hover:opacity-80 transition-opacity cursor-pointer`}
+              className={`badge text-[10px] whitespace-nowrap ${cfg.bg} ${cfg.color} hover:opacity-80 transition-opacity cursor-pointer`}
             >
               {cfg.label}
             </button>

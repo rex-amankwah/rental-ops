@@ -1,4 +1,5 @@
 import { ORDER_STATUS_CONFIG, INVOICE_STATUS_CONFIG, DISPATCH_STATUS_CONFIG, ASSET_STATUS_CONFIG } from '@/lib/constants'
+import { ROLE_COLORS, ROLE_ALIAS } from '@/lib/statusColors'
 import type { OrderStatus, InvoiceStatus, DispatchStatus, AssetStatus } from '@/types/database'
 
 interface StatusBadgeProps {
@@ -41,18 +42,9 @@ export function PriorityBadge({ priority }: { priority: string }) {
   )
 }
 
-// Role badge
-const ROLE_CONFIG = {
-  owner:    { label: 'Owner',    color: 'text-purple-700', bg: 'bg-purple-100' },
-  admin:    { label: 'Admin',    color: 'text-indigo-700', bg: 'bg-indigo-100' },
-  manager:  { label: 'Manager',  color: 'text-blue-700',   bg: 'bg-blue-100' },
-  staff:    { label: 'Staff',    color: 'text-slate-700',  bg: 'bg-slate-100' },
-  driver:   { label: 'Driver',   color: 'text-teal-700',   bg: 'bg-teal-100' },
-  customer: { label: 'Customer', color: 'text-gray-700',   bg: 'bg-gray-100' },
-}
-
 export function RoleBadge({ role }: { role: string }) {
-  const config = ROLE_CONFIG[role as keyof typeof ROLE_CONFIG] ?? ROLE_CONFIG.staff
+  const normalized = ROLE_ALIAS[role] ?? role
+  const config = ROLE_COLORS[normalized] ?? ROLE_COLORS.viewer
   return (
     <span className={`badge ${config.bg} ${config.color}`}>
       {config.label}

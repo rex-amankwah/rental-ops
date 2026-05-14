@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { canEdit } from '@/lib/roles'
 import { PageShell, PageHeader, TableCard } from '@/components/common/PageShell'
 import { formatDate } from '@/lib/constants'
+import { getDamageSeverityClass, getDamageStatusClass, DAMAGE_SEVERITY_COLORS, DAMAGE_STATUS_COLORS } from '@/lib/statusColors'
 
 interface DamageReport {
   id: string
@@ -21,19 +22,6 @@ interface DamageReport {
   created_at: string
   order: { order_number: string } | null
   customer: { first_name: string; last_name: string } | null
-}
-
-const SEVERITY_STYLE: Record<string, string> = {
-  minor:    'bg-amber-100 text-amber-700',
-  moderate: 'bg-orange-100 text-orange-700',
-  severe:   'bg-red-100 text-red-700',
-}
-
-const STATUS_STYLE: Record<string, string> = {
-  open:       'bg-red-100 text-red-700',
-  in_review:  'bg-amber-100 text-amber-700',
-  resolved:   'bg-emerald-100 text-emerald-700',
-  closed:     'bg-muted text-muted-foreground',
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
@@ -142,13 +130,13 @@ export default function DamagesPage() {
                     {r.estimated_cost != null ? `$${r.estimated_cost.toFixed(2)}` : '—'}
                   </td>
                   <td>
-                    <span className={`badge text-xs capitalize ${SEVERITY_STYLE[r.severity] ?? 'bg-muted text-muted-foreground'}`}>
-                      {r.severity}
+                    <span className={`badge text-xs ${getDamageSeverityClass(r.severity)}`}>
+                      {DAMAGE_SEVERITY_COLORS[r.severity]?.label ?? r.severity}
                     </span>
                   </td>
                   <td>
-                    <span className={`badge text-xs capitalize ${STATUS_STYLE[r.status] ?? 'bg-muted text-muted-foreground'}`}>
-                      {r.status.replace(/_/g, ' ')}
+                    <span className={`badge text-xs ${getDamageStatusClass(r.status)}`}>
+                      {DAMAGE_STATUS_COLORS[r.status]?.label ?? r.status.replace(/_/g, ' ')}
                     </span>
                   </td>
                 </tr>

@@ -5,21 +5,13 @@ import { useAuth } from '@/hooks/useAuth'
 import { PageShell, PageHeader, TableCard, TableToolbar, StatCard } from '@/components/common/PageShell'
 import { DataTable } from '@/components/common/DataTable'
 import { formatCurrency, formatDate, PAYMENT_METHODS } from '@/lib/constants'
+import { getPaymentTypeClass, PAYMENT_TYPE_COLORS } from '@/lib/statusColors'
 import type { Payment, Customer, RentalOrder, Invoice } from '@/types/database'
 
 type PaymentWithJoins = Payment & {
   customer: Pick<Customer, 'first_name' | 'last_name' | 'company_name'> | null
   order: Pick<RentalOrder, 'order_number' | 'event_name'> | null
   invoice: Pick<Invoice, 'invoice_number'> | null
-}
-
-const PAYMENT_TYPE_LABELS: Record<string, string> = {
-  deposit:          'Deposit',
-  payment:          'Payment',
-  partial_payment:  'Partial Payment',
-  refund:           'Refund',
-  security_deposit: 'Security Deposit',
-  security_refund:  'Security Refund',
 }
 
 const TYPE_TABS = [
@@ -171,14 +163,8 @@ export default function PaymentsPage() {
       label: 'Type',
       sortable: true,
       render: (row: PaymentWithJoins) => (
-        <span className={`badge text-xs ${
-          row.payment_type === 'refund' || row.payment_type === 'security_refund'
-            ? 'bg-red-100 text-red-700'
-            : row.payment_type === 'deposit' || row.payment_type === 'security_deposit'
-            ? 'bg-blue-100 text-blue-700'
-            : 'bg-emerald-100 text-emerald-700'
-        }`}>
-          {PAYMENT_TYPE_LABELS[row.payment_type] ?? row.payment_type}
+        <span className={`badge text-xs ${getPaymentTypeClass(row.payment_type)}`}>
+          {PAYMENT_TYPE_COLORS[row.payment_type]?.label ?? row.payment_type}
         </span>
       ),
     },

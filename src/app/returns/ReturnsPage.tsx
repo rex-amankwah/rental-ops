@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { canEdit } from '@/lib/roles'
 import { PageShell, PageHeader, TableCard } from '@/components/common/PageShell'
 import { formatDate } from '@/lib/constants'
+import { getReturnStatusClass, RETURN_STATUS_COLORS } from '@/lib/statusColors'
 import type { RentalOrder, Customer } from '@/types/database'
 
 type ReturnWithOrder = {
@@ -106,12 +107,8 @@ export default function ReturnsPage() {
                     </td>
                     <td className="text-sm text-muted-foreground">{formatDate(ret.return_date)}</td>
                     <td>
-                      <span className={`badge text-xs ${
-                        ret.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
-                        ret.status === 'disputed'  ? 'bg-red-100 text-red-700' :
-                        'bg-amber-100 text-amber-700'
-                      }`}>
-                        {ret.status}
+                      <span className={`badge text-xs ${getReturnStatusClass(ret.status)}`}>
+                        {RETURN_STATUS_COLORS[ret.status]?.label ?? ret.status}
                       </span>
                     </td>
                     <td className="text-xs text-muted-foreground truncate max-w-[200px]">

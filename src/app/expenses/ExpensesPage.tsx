@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { canEdit } from '@/lib/roles'
 import { PageShell, PageHeader, TableCard } from '@/components/common/PageShell'
 import { EXPENSE_CATEGORIES, formatCurrency, formatDate } from '@/lib/constants'
+import { getExpenseCategoryClass } from '@/lib/statusColors'
 
 interface Expense {
   id: string
@@ -18,16 +19,6 @@ interface Expense {
   notes: string | null
   created_at: string
   order: { order_number: string } | null
-}
-
-const CATEGORY_STYLE: Record<string, string> = {
-  labor:     'bg-blue-100 text-blue-700',
-  fuel:      'bg-amber-100 text-amber-700',
-  repair:    'bg-orange-100 text-orange-700',
-  supplies:  'bg-teal-100 text-teal-700',
-  transport: 'bg-violet-100 text-violet-700',
-  marketing: 'bg-pink-100 text-pink-700',
-  other:     'bg-muted text-muted-foreground',
 }
 
 export default function ExpensesPage() {
@@ -139,7 +130,7 @@ export default function ExpensesPage() {
                     {formatDate(exp.expense_date)}
                   </td>
                   <td>
-                    <span className={`badge text-xs capitalize ${CATEGORY_STYLE[exp.category] ?? 'bg-muted text-muted-foreground'}`}>
+                    <span className={`badge text-xs capitalize ${getExpenseCategoryClass(exp.category)}`}>
                       {catLabel(exp.category)}
                     </span>
                   </td>

@@ -8,38 +8,15 @@ import {
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { formatDate } from '@/lib/constants'
+import { ROLE_COLORS } from '@/lib/statusColors'
 import type { Profile, AppRole } from '@/types/database'
 
-// ─── Role config ─────────────────────────────────────────────────────────────
+// ─── Role details (icon + description only — colors come from ROLE_COLORS) ───
 
-const ROLE_CONFIG: Record<AppRole, {
-  label: string
-  icon: React.ElementType
-  bg: string
-  color: string
-  description: string
-}> = {
-  admin: {
-    label: 'Admin',
-    icon: ShieldCheck,
-    bg: 'bg-violet-100',
-    color: 'text-violet-700',
-    description: 'Full system access including settings and team management',
-  },
-  staff: {
-    label: 'Staff',
-    icon: Briefcase,
-    bg: 'bg-blue-100',
-    color: 'text-blue-700',
-    description: 'All operational workflows — orders, dispatch, returns, invoices',
-  },
-  viewer: {
-    label: 'Viewer',
-    icon: Eye,
-    bg: 'bg-muted',
-    color: 'text-muted-foreground',
-    description: 'Read-only access to all data, no mutations allowed',
-  },
+const ROLE_DETAILS: Record<AppRole, { icon: React.ElementType; description: string }> = {
+  admin:  { icon: ShieldCheck, description: 'Full system access including settings and team management' },
+  staff:  { icon: Briefcase,   description: 'All operational workflows — orders, dispatch, returns, invoices' },
+  viewer: { icon: Eye,         description: 'Read-only access to all data, no mutations allowed' },
 }
 
 function initials(member: Profile): string {
@@ -123,7 +100,7 @@ export default function TeamPage() {
 
     if (err) { setError(err.message); return }
     setMembers(prev => prev.map(m => m.id === member.id ? { ...m, role: newRole } : m))
-    flash(`${member.full_name ?? member.email} is now ${ROLE_CONFIG[newRole].label}.`)
+    flash(`${member.full_name ?? member.email} is now ${ROLE_COLORS[newRole].label}.`)
   }
 
   async function toggleActive(member: Profile) {
@@ -195,15 +172,16 @@ export default function TeamPage() {
       <div className="bg-card border border-border rounded-xl p-5 space-y-3">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Role Permissions</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {(Object.entries(ROLE_CONFIG) as [AppRole, typeof ROLE_CONFIG[AppRole]][]).map(([role, cfg]) => {
-            const Icon = cfg.icon
+          {(Object.keys(ROLE_DETAILS) as AppRole[]).map((role) => {
+            const { icon: Icon, description } = ROLE_DETAILS[role]
+            const colors = ROLE_COLORS[role]
             return (
               <div key={role} className="flex items-start gap-2.5 p-3 rounded-lg bg-muted/40">
                 <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-xs font-semibold text-foreground">{cfg.label}</p>
+                  <p className="text-xs font-semibold text-foreground">{colors.label}</p>
                   <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
-                    {cfg.description}
+                    {description}
                   </p>
                 </div>
               </div>
@@ -235,7 +213,7 @@ export default function TeamPage() {
         ) : (
           <div className="divide-y divide-border">
             {members.map(member => {
-              const cfg = ROLE_CONFIG[member.role] ?? ROLE_CONFIG.staff
+              const cfg = ROLE_COLORS[member.role] ?? ROLE_COLORS.viewer
               const isSelf = member.id === myProfile?.id
               const isSaving = saving === member.id
 
