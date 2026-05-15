@@ -155,6 +155,7 @@ export function getReservationStatusClass(status: string): string {
 export const TRACKING_TYPE_COLORS: Record<string, { label: string; bg: string; color: string }> = {
   serialized: { label: 'Serialized', bg: 'bg-indigo-100', color: 'text-indigo-700' },
   bulk:       { label: 'Bulk',       bg: 'bg-slate-100',  color: 'text-slate-600' },
+  hybrid:     { label: 'Hybrid',     bg: 'bg-purple-100', color: 'text-purple-700' },
 }
 
 export function getTrackingTypeClass(type: string): string {

@@ -1,12 +1,13 @@
 import { ChangeEvent, useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Plus, Package, SlidersHorizontal, Tag, X, Pencil } from 'lucide-react'
+import { Search, Plus, Package, SlidersHorizontal, Tag, TrendingDown } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { PageShell, PageHeader, TableCard, TableToolbar, StatCard } from '@/components/common/PageShell'
 import { DataTable } from '@/components/common/DataTable'
-import { INVENTORY_CATEGORIES } from '@/lib/constants'
+import { formatCurrency, INVENTORY_CATEGORIES } from '@/lib/constants'
 import { TRACKING_TYPE_COLORS, getTrackingTypeClass } from '@/lib/statusColors'
+import { calcDepreciation } from '@/lib/depreciation'
 import { canEdit } from '@/lib/roles'
 import type { InventoryCatalogItem } from '@/types/database'
 
@@ -25,6 +26,35 @@ function AvailabilityBar({ available, owned }: { available: number; owned: numbe
   )
 }
 
+// ─── Inventory status badge ───────────────────────────────────────────────────
+function InventoryStatusBadge({ item }: { item: InventoryCatalogItem }) {
+  if (item.quantity_owned === 0) {
+    return <span className="badge text-xs bg-muted text-muted-foreground">Not Set</span>
+  }
+  if (item.quantity_available === 0) {
+    return <span className="badge text-xs bg-red-100 text-red-700">Out of Stock</span>
+  }
+  const threshold = item.reorder_point ?? 2
+  if (item.quantity_available <= threshold) {
+    return <span className="badge text-xs bg-amber-100 text-amber-700">Low Stock</span>
+  }
+  return <span className="badge text-xs bg-emerald-100 text-emerald-700">Available</span>
+}
+
+// ─── Estimated book value cell ────────────────────────────────────────────────
+function BookValueCell({ item }: { item: InventoryCatalogItem }) {
+  if (item.depreciation_method !== 'straight_line') {
+    return <span className="text-xs text-muted-foreground">—</span>
+  }
+  const dep = calcDepreciation(item)
+  if (!dep) return <span className="text-xs text-muted-foreground">Not configured</span>
+  return (
+    <span className="text-sm font-medium text-foreground">
+      {formatCurrency(dep.bookValue)}
+    </span>
+  )
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function InventoryPage() {
   const { profile, appRole } = useAuth()
@@ -37,7 +67,6 @@ export default function InventoryPage() {
   const [total, setTotal] = useState(0)
   const [sortKey, setSortKey] = useState('name')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
-  const [selectedItem, setSelectedItem] = useState<InventoryCatalogItem | null>(null)
 
   const fetchItems = useCallback(async () => {
     if (!profile?.company_id) return
@@ -66,14 +95,20 @@ export default function InventoryPage() {
     else { setSortKey(key); setSortDir('asc') }
   }
 
-  const totalOwned     = items.reduce((a, i) => a + i.quantity_owned, 0)
-  const totalAvailable = items.reduce((a, i) => a + i.quantity_available, 0)
-  const totalOut       = items.reduce((a, i) => a + i.quantity_out, 0)
-  const lowStockCount  = items.filter(i => i.quantity_available < 3 && i.quantity_owned > 0).length
+  const totalOwned        = items.reduce((a, i) => a + i.quantity_owned, 0)
+  const totalAvailable    = items.reduce((a, i) => a + i.quantity_available, 0)
+  const totalOut          = items.reduce((a, i) => a + i.quantity_out, 0)
+  const lowStockCount     = items.filter(i => {
+    const threshold = i.reorder_point ?? 2
+    return i.quantity_available <= threshold && i.quantity_owned > 0
+  }).length
+  const totalReplacement  = items.reduce((a, i) => a + (i.replacement_cost ?? 0) * i.quantity_owned, 0)
+  const totalPurchase     = items.reduce((a, i) => a + (i.purchase_cost ?? 0) * i.quantity_owned, 0)
+  const withDepreciation  = items.filter(i => i.depreciation_method === 'straight_line').length
 
   const columns = [
     {
-      key: 'name', label: 'Item Name', sortable: true,
+      key: 'name', label: 'Item', sortable: true,
       render: (row: InventoryCatalogItem) => (
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 text-base">
@@ -90,7 +125,7 @@ export default function InventoryPage() {
       key: 'category', label: 'Category', sortable: true,
       render: (row: InventoryCatalogItem) => {
         const cat = INVENTORY_CATEGORIES.find(c => c.value === row.category)
-        return <span className="badge bg-muted text-muted-foreground capitalize">{cat?.label ?? row.category}</span>
+        return <span className="badge bg-muted text-muted-foreground text-xs">{cat?.label ?? row.category}</span>
       },
     },
     {
@@ -102,32 +137,51 @@ export default function InventoryPage() {
       ),
     },
     {
-      key: 'rental_rate', label: 'Rate / Day', sortable: true, align: 'right' as const,
+      key: 'quantity_owned', label: 'Owned', sortable: true, align: 'right' as const,
       render: (row: InventoryCatalogItem) => (
-        <span className="text-sm font-medium text-foreground">${row.rental_rate.toFixed(2)}</span>
+        <span className="text-sm text-foreground">{row.quantity_owned}</span>
       ),
     },
     {
-      key: 'availability', label: 'Availability',
+      key: 'availability', label: 'Available',
       render: (row: InventoryCatalogItem) => <AvailabilityBar available={row.quantity_available} owned={row.quantity_owned} />,
     },
     {
-      key: 'quantity_out', label: 'Out', align: 'right' as const, sortable: true,
+      key: 'quantity_out', label: 'Out/Reserved', align: 'right' as const,
       render: (row: InventoryCatalogItem) => (
-        <span className={`text-sm font-medium ${row.quantity_out > 0 ? 'text-violet-600' : 'text-muted-foreground'}`}>{row.quantity_out}</span>
+        <div className="text-right">
+          <span className={`text-sm ${row.quantity_out > 0 ? 'text-violet-600 font-medium' : 'text-muted-foreground'}`}>
+            {row.quantity_out}
+          </span>
+          {row.quantity_reserved > 0 && (
+            <span className="text-xs text-blue-500 ml-1">+{row.quantity_reserved}</span>
+          )}
+        </div>
       ),
     },
     {
-      key: 'quantity_damaged', label: 'Damaged', align: 'right' as const,
+      key: 'rental_rate', label: 'Rate/Day', sortable: true, align: 'right' as const,
       render: (row: InventoryCatalogItem) => (
-        <span className={`text-sm ${row.quantity_damaged > 0 ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
-          {row.quantity_damaged > 0 ? row.quantity_damaged : '—'}
+        <span className="text-sm font-medium text-foreground">{formatCurrency(row.rental_rate)}</span>
+      ),
+    },
+    {
+      key: 'replacement_cost', label: 'Replace Cost', sortable: true, align: 'right' as const,
+      render: (row: InventoryCatalogItem) => (
+        <span className="text-sm text-muted-foreground">
+          {row.replacement_cost ? formatCurrency(row.replacement_cost) : '—'}
         </span>
       ),
     },
     {
-      key: 'warehouse_location', label: 'Location',
-      render: (row: InventoryCatalogItem) => <span className="text-xs text-muted-foreground">{row.warehouse_location || '—'}</span>,
+      key: 'current_book_value', label: 'Est. Book Value', align: 'right' as const,
+      render: (row: InventoryCatalogItem) => (
+        <div className="text-right"><BookValueCell item={row} /></div>
+      ),
+    },
+    {
+      key: 'status', label: 'Status',
+      render: (row: InventoryCatalogItem) => <InventoryStatusBadge item={row} />,
     },
   ]
 
@@ -150,10 +204,29 @@ export default function InventoryPage() {
           icon={<Package className="w-5 h-5 text-emerald-600" />} iconBg="bg-emerald-50" colorClass="text-emerald-700" />
         <StatCard label="Currently Out" value={loading ? '—' : totalOut.toLocaleString()}
           icon={<Package className="w-5 h-5 text-violet-600" />} iconBg="bg-violet-50" colorClass="text-violet-700" />
-        <StatCard label="Low Stock Items" value={loading ? '—' : lowStockCount} sub="Less than 3 available"
+        <StatCard label="Low Stock Items" value={loading ? '—' : lowStockCount} sub="At or below reorder point"
           icon={<Package className="w-5 h-5 text-red-600" />} iconBg="bg-red-50"
           colorClass={lowStockCount > 0 ? 'text-red-700' : 'text-foreground'} />
       </div>
+
+      {/* Valuation summary strip */}
+      {!loading && (totalPurchase > 0 || totalReplacement > 0) && (
+        <div className="flex flex-wrap gap-4 px-4 py-3 bg-card border border-border rounded-xl text-sm">
+          <div className="flex items-center gap-2">
+            <TrendingDown className="w-4 h-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Valuation summary:</span>
+          </div>
+          {totalPurchase > 0 && (
+            <span>Purchase cost: <strong>{formatCurrency(totalPurchase)}</strong></span>
+          )}
+          {totalReplacement > 0 && (
+            <span>Replacement value: <strong>{formatCurrency(totalReplacement)}</strong></span>
+          )}
+          {withDepreciation > 0 && (
+            <span className="text-muted-foreground">{withDepreciation} item{withDepreciation !== 1 ? 's' : ''} with depreciation</span>
+          )}
+        </div>
+      )}
 
       <TableCard>
         <TableToolbar>
@@ -175,6 +248,7 @@ export default function InventoryPage() {
               <option value="">All Types</option>
               <option value="bulk">Bulk</option>
               <option value="serialized">Serialized</option>
+              <option value="hybrid">Hybrid</option>
             </select>
           </div>
           <div className="flex-1" />
@@ -198,7 +272,7 @@ export default function InventoryPage() {
           columns={columns}
           data={items}
           keyField="id"
-          onRowClick={(row) => setSelectedItem(row as unknown as InventoryCatalogItem)}
+          onRowClick={(row) => navigate(`/inventory/${(row as InventoryCatalogItem).id}`)}
           sortKey={sortKey}
           sortDir={sortDir}
           onSort={handleSort}
@@ -220,53 +294,6 @@ export default function InventoryPage() {
               <Plus className="w-4 h-4" /> Add First Item
             </button>
           )}
-        </div>
-      )}
-
-      {/* Item quick-view panel */}
-      {selectedItem && (
-        <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setSelectedItem(null)} />
-          <div className="relative bg-card rounded-xl border border-border shadow-2xl w-full max-w-md p-6 space-y-4">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-base font-semibold text-foreground">{selectedItem.name}</h2>
-                {selectedItem.sku && <p className="text-xs text-muted-foreground font-mono mt-0.5">{selectedItem.sku}</p>}
-              </div>
-              <div className="flex items-center gap-1 flex-shrink-0">
-                {canEdit(appRole) && (
-                  <button
-                    onClick={() => { setSelectedItem(null); navigate(`/inventory/${selectedItem.id}/edit`) }}
-                    className="btn-secondary text-xs px-2.5 py-1.5 h-auto"
-                  >
-                    <Pencil className="w-3 h-3" /> Edit
-                  </button>
-                )}
-                <button onClick={() => setSelectedItem(null)} className="btn-ghost p-1.5"><X className="w-4 h-4" /></button>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              {[
-                ['Category', INVENTORY_CATEGORIES.find(c => c.value === selectedItem.category)?.label ?? selectedItem.category],
-                ['Tracking', selectedItem.tracking_type],
-                ['Rate / Day', `$${selectedItem.rental_rate.toFixed(2)}`],
-                ['Replace Cost', `$${selectedItem.replacement_cost.toFixed(2)}`],
-                ['Owned', String(selectedItem.quantity_owned)],
-                ['Available', String(selectedItem.quantity_available)],
-                ['Out', String(selectedItem.quantity_out)],
-                ['Damaged', String(selectedItem.quantity_damaged)],
-                ['Location', selectedItem.warehouse_location || '—'],
-              ].map(([k, v]) => (
-                <div key={k}>
-                  <p className="text-xs text-muted-foreground">{k}</p>
-                  <p className="font-medium text-foreground">{v}</p>
-                </div>
-              ))}
-            </div>
-            {selectedItem.description && (
-              <p className="text-sm text-muted-foreground border-t border-border pt-3">{selectedItem.description}</p>
-            )}
-          </div>
         </div>
       )}
     </PageShell>

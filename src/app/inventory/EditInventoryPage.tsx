@@ -17,19 +17,40 @@ interface InventoryForm {
   quantity_owned: string
   warehouse_location: string
   description: string
+  // Valuation
+  purchase_cost: string
+  vendor_name: string
+  purchase_date: string
+  expected_lifespan_months: string
+  depreciation_method: string
+  residual_value: string
+  damage_fee_default: string
+  replacement_fee_default: string
+  condition_notes: string
+  reorder_point: string
 }
 
 function toForm(item: InventoryCatalogItem): InventoryForm {
   return {
-    name:               item.name,
-    sku:                item.sku ?? '',
-    category:           item.category,
-    tracking_type:      item.tracking_type,
-    rental_rate:        String(item.rental_rate),
-    replacement_cost:   String(item.replacement_cost),
-    quantity_owned:     String(item.quantity_owned),
-    warehouse_location: item.warehouse_location ?? '',
-    description:        item.description ?? '',
+    name:                      item.name,
+    sku:                       item.sku ?? '',
+    category:                  item.category,
+    tracking_type:             item.tracking_type,
+    rental_rate:               String(item.rental_rate),
+    replacement_cost:          String(item.replacement_cost),
+    quantity_owned:            String(item.quantity_owned),
+    warehouse_location:        item.warehouse_location ?? '',
+    description:               item.description ?? '',
+    purchase_cost:             item.purchase_cost != null ? String(item.purchase_cost) : '',
+    vendor_name:               item.vendor_name ?? '',
+    purchase_date:             item.purchase_date ?? '',
+    expected_lifespan_months:  item.expected_lifespan_months != null ? String(item.expected_lifespan_months) : '',
+    depreciation_method:       item.depreciation_method ?? 'none',
+    residual_value:            item.residual_value != null ? String(item.residual_value) : '0',
+    damage_fee_default:        item.damage_fee_default != null ? String(item.damage_fee_default) : '',
+    replacement_fee_default:   item.replacement_fee_default != null ? String(item.replacement_fee_default) : '',
+    condition_notes:           item.condition_notes ?? '',
+    reorder_point:             item.reorder_point != null ? String(item.reorder_point) : '',
   }
 }
 
@@ -78,6 +99,10 @@ export default function EditInventoryPage() {
     if (!form.category) e.category = 'Category is required'
     if (isNaN(parseFloat(form.rental_rate)) || parseFloat(form.rental_rate) < 0) e.rental_rate = 'Enter a valid rate'
     if (isNaN(parseInt(form.quantity_owned)) || parseInt(form.quantity_owned) < 0) e.quantity_owned = 'Enter a valid quantity'
+    if (form.reorder_point && (isNaN(parseInt(form.reorder_point)) || parseInt(form.reorder_point) < 0)) e.reorder_point = 'Enter a valid reorder point'
+    if (form.expected_lifespan_months && (isNaN(parseInt(form.expected_lifespan_months)) || parseInt(form.expected_lifespan_months) <= 0)) {
+      e.expected_lifespan_months = 'Enter a positive number of months'
+    }
     setFieldErrors(e)
     return Object.keys(e).length === 0
   }
@@ -93,22 +118,32 @@ export default function EditInventoryPage() {
       const { error: e } = await supabase
         .from('inventory_catalog')
         .update({
-          name:               form.name.trim(),
-          sku:                form.sku.trim() || null,
-          category:           form.category,
-          tracking_type:      form.tracking_type,
-          rental_rate:        parseFloat(form.rental_rate) || 0,
-          replacement_cost:   parseFloat(form.replacement_cost) || 0,
-          quantity_owned:     newOwned,
-          quantity_available: newAvailable,
-          warehouse_location: form.warehouse_location.trim() || null,
-          description:        form.description.trim() || null,
-          updated_at:         new Date().toISOString(),
+          name:                      form.name.trim(),
+          sku:                       form.sku.trim() || null,
+          category:                  form.category,
+          tracking_type:             form.tracking_type,
+          rental_rate:               parseFloat(form.rental_rate) || 0,
+          replacement_cost:          parseFloat(form.replacement_cost) || 0,
+          quantity_owned:            newOwned,
+          quantity_available:        newAvailable,
+          warehouse_location:        form.warehouse_location.trim() || null,
+          description:               form.description.trim() || null,
+          purchase_cost:             form.purchase_cost ? parseFloat(form.purchase_cost) : null,
+          vendor_name:               form.vendor_name.trim() || null,
+          purchase_date:             form.purchase_date || null,
+          expected_lifespan_months:  form.expected_lifespan_months ? parseInt(form.expected_lifespan_months) : null,
+          depreciation_method:       form.depreciation_method === 'none' ? 'none' : (form.depreciation_method || null),
+          residual_value:            parseFloat(form.residual_value) || 0,
+          damage_fee_default:        form.damage_fee_default ? parseFloat(form.damage_fee_default) : null,
+          replacement_fee_default:   form.replacement_fee_default ? parseFloat(form.replacement_fee_default) : null,
+          condition_notes:           form.condition_notes.trim() || null,
+          reorder_point:             form.reorder_point ? parseInt(form.reorder_point) : null,
+          updated_at:                new Date().toISOString(),
         })
         .eq('id', id)
         .eq('company_id', profile.company_id)
       if (e) throw e
-      navigate('/inventory')
+      navigate(`/inventory/${id}`)
     } catch (err: unknown) {
       setError((err as { message?: string }).message ?? 'Failed to save changes')
     } finally { setSaving(false) }
@@ -143,7 +178,7 @@ export default function EditInventoryPage() {
         title="Edit Inventory Item"
         subtitle={form.name}
         actions={
-          <button onClick={() => navigate('/inventory')} className="btn-secondary">
+          <button onClick={() => navigate(`/inventory/${id}`)} className="btn-secondary">
             <ArrowLeft className="w-4 h-4" /> Cancel
           </button>
         }
@@ -156,7 +191,9 @@ export default function EditInventoryPage() {
           </div>
         )}
 
+        {/* ── Core fields ─────────────────────────────────────────────────────── */}
         <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+          <h3 className="text-sm font-semibold text-foreground">Item Details</h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2 space-y-1.5">
               <label className="form-label">Item Name <span className="text-red-500">*</span></label>
@@ -223,7 +260,16 @@ export default function EditInventoryPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="form-label">Warehouse Location</label>
+              <label className="form-label">Reorder Point</label>
+              <input type="number" min="0" value={form.reorder_point}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => patch('reorder_point', e.target.value)}
+                placeholder="e.g. 5"
+                className={`form-input ${fieldErrors.reorder_point ? 'border-red-400' : ''}`} />
+              {fieldErrors.reorder_point && <p className="text-xs text-red-600">{fieldErrors.reorder_point}</p>}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="form-label">Storage Location</label>
               <input type="text" value={form.warehouse_location}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => patch('warehouse_location', e.target.value)}
                 placeholder="Bay A" className="form-input" />
@@ -239,8 +285,101 @@ export default function EditInventoryPage() {
           </div>
         </div>
 
+        {/* ── Valuation & depreciation ─────────────────────────────────────────── */}
+        <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Valuation & Depreciation</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Optional — used for book value estimates and asset management. Not tax/accounting-grade.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="form-label">Purchase Cost ($)</label>
+              <input type="number" min="0" step="0.01" value={form.purchase_cost}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => patch('purchase_cost', e.target.value)}
+                placeholder="0.00" className="form-input" />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="form-label">Purchase Date</label>
+              <input type="date" value={form.purchase_date}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => patch('purchase_date', e.target.value)}
+                className="form-input" />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="form-label">Vendor / Supplier</label>
+              <input type="text" value={form.vendor_name}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => patch('vendor_name', e.target.value)}
+                placeholder="ABC Rentals Supply Co." className="form-input" />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="form-label">Depreciation Method</label>
+              <select value={form.depreciation_method}
+                onChange={(e: ChangeEvent<HTMLSelectElement>) => patch('depreciation_method', e.target.value)}
+                className="form-select">
+                <option value="none">None (no depreciation)</option>
+                <option value="straight_line">Straight-line</option>
+              </select>
+            </div>
+
+            {form.depreciation_method === 'straight_line' && (
+              <>
+                <div className="space-y-1.5">
+                  <label className="form-label">Useful Life (months)</label>
+                  <input type="number" min="1" value={form.expected_lifespan_months}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => patch('expected_lifespan_months', e.target.value)}
+                    placeholder="60"
+                    className={`form-input ${fieldErrors.expected_lifespan_months ? 'border-red-400' : ''}`} />
+                  {fieldErrors.expected_lifespan_months && (
+                    <p className="text-xs text-red-600">{fieldErrors.expected_lifespan_months}</p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="form-label">Residual Value ($)</label>
+                  <input type="number" min="0" step="0.01" value={form.residual_value}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => patch('residual_value', e.target.value)}
+                    placeholder="0.00" className="form-input" />
+                  <p className="text-xs text-muted-foreground">Book value floor — depreciation stops here.</p>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* ── Default fees ─────────────────────────────────────────────────────── */}
+        <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+          <h3 className="text-sm font-semibold text-foreground">Default Fees & Notes</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="form-label">Default Damage Fee ($)</label>
+              <input type="number" min="0" step="0.01" value={form.damage_fee_default}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => patch('damage_fee_default', e.target.value)}
+                placeholder="0.00" className="form-input" />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="form-label">Default Replacement Fee ($)</label>
+              <input type="number" min="0" step="0.01" value={form.replacement_fee_default}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => patch('replacement_fee_default', e.target.value)}
+                placeholder="0.00" className="form-input" />
+            </div>
+
+            <div className="col-span-2 space-y-1.5">
+              <label className="form-label">Condition Notes</label>
+              <textarea value={form.condition_notes}
+                onChange={(e: ChangeEvent<HTMLTextAreaElement>) => patch('condition_notes', e.target.value)}
+                placeholder="Current condition, known wear, maintenance history…"
+                className="form-input min-h-[60px] resize-y" />
+            </div>
+          </div>
+        </div>
+
         <div className="flex justify-between">
-          <button onClick={() => navigate('/inventory')} className="btn-secondary" disabled={saving}>Cancel</button>
+          <button onClick={() => navigate(`/inventory/${id}`)} className="btn-secondary" disabled={saving}>Cancel</button>
           <button onClick={save} className="btn-primary" disabled={saving}>
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Save Changes

@@ -13,6 +13,7 @@ import CustomerDetailPage from '@/app/customers/CustomerDetailPage'
 import NewCustomerPage from '@/app/customers/NewCustomerPage'
 import EditCustomerPage from '@/app/customers/EditCustomerPage'
 import InventoryPage from '@/app/inventory/InventoryPage'
+import InventoryDetailPage from '@/app/inventory/InventoryDetailPage'
 import NewInventoryPage from '@/app/inventory/NewInventoryPage'
 import EditInventoryPage from '@/app/inventory/EditInventoryPage'
 import InvoicesPage from '@/app/invoices/InvoicesPage'
@@ -131,6 +132,7 @@ function AppRoutes() {
 
         <Route path="inventory" element={<InventoryPage />} />
         <Route path="inventory/new" element={<RoleGuard require="staff"><NewInventoryPage /></RoleGuard>} />
+        <Route path="inventory/:id" element={<InventoryDetailPage />} />
         <Route path="inventory/:id/edit" element={<RoleGuard require="staff"><EditInventoryPage /></RoleGuard>} />
 
         <Route path="invoices" element={<InvoicesPage />} />

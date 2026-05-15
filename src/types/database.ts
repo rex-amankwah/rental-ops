@@ -27,7 +27,9 @@ export type DispatchStatus =
   | 'scheduled' | 'loading' | 'out_for_delivery' | 'delivered'
   | 'setup_done' | 'pickup_pending' | 'returned' | 'cancelled'
 
-export type TrackingType = 'serialized' | 'bulk'
+export type TrackingType = 'serialized' | 'bulk' | 'hybrid'
+
+export type DepreciationMethod = 'straight_line' | 'none'
 
 export type AssetStatus = 'available' | 'reserved' | 'out' | 'damaged' | 'under_repair' | 'retired' | 'lost'
 
@@ -121,6 +123,18 @@ export interface InventoryCatalogItem {
   is_active: boolean
   created_at: string
   updated_at: string
+  // Valuation & master-data — added by migration 20260515_inventory_valuation_fields.sql
+  purchase_cost: number | null
+  vendor_name: string | null
+  purchase_date: string | null
+  expected_lifespan_months: number | null
+  depreciation_method: DepreciationMethod | null
+  residual_value: number | null
+  current_book_value: number | null
+  damage_fee_default: number | null
+  replacement_fee_default: number | null
+  condition_notes: string | null
+  reorder_point: number | null
 }
 
 export interface InventoryAsset {
