@@ -1,6 +1,6 @@
 import { useEffect, useState, ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, Loader2, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Plus, Loader2, AlertTriangle, Info } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { PageShell, PageHeader } from '@/components/common/PageShell'
@@ -38,6 +38,16 @@ const BLANK: InventoryDraft = {
   residual_value: '0', damage_fee_default: '', replacement_fee_default: '',
   condition_notes: '', reorder_point: '',
 }
+
+// ─── Tracking type helper text ────────────────────────────────────────────────
+
+const TRACKING_HELPER: Record<string, string> = {
+  bulk:       'Best for chairs, tables, linens, and quantity-based inventory. Tracks quantities only — no individual asset IDs.',
+  serialized: 'Best for high-value equipment like speakers and projectors. Each item is individually tracked and prepared for future QR/barcode workflows.',
+  hybrid:     'Best for premium rental inventory that may occasionally need individual tracking. Combines quantity tracking with flexible asset-level workflows.',
+}
+
+// ─── Draft persistence ────────────────────────────────────────────────────────
 
 const DRAFT_KEY = 'rental_ops_inventory_new_draft'
 
@@ -124,6 +134,11 @@ export default function NewInventoryPage() {
 
   function cancel() { clearDraft(); navigate('/inventory') }
 
+  // Derived helpers
+  const qty = parseInt(form.quantity_owned) || 0
+  const showSerializedWarning = form.tracking_type === 'serialized' && qty > 1
+  const trackingHelper = TRACKING_HELPER[form.tracking_type]
+
   return (
     <PageShell>
       <PageHeader
@@ -143,10 +158,12 @@ export default function NewInventoryPage() {
           </div>
         )}
 
-        {/* ── Core fields ─────────────────────────────────────────────────────── */}
+        {/* ── A. Operational Details ───────────────────────────────────────────── */}
         <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-          <h3 className="text-sm font-semibold text-foreground">Item Details</h3>
+          <h3 className="text-sm font-semibold text-foreground">Operational Details</h3>
           <div className="grid grid-cols-2 gap-4">
+
+            {/* Item Name */}
             <div className="col-span-2 space-y-1.5">
               <label className="form-label">Item Name <span className="text-red-500">*</span></label>
               <input type="text" autoFocus value={form.name}
@@ -156,6 +173,7 @@ export default function NewInventoryPage() {
               {fieldErrors.name && <p className="text-xs text-red-600">{fieldErrors.name}</p>}
             </div>
 
+            {/* SKU */}
             <div className="space-y-1.5">
               <label className="form-label">SKU</label>
               <input type="text" value={form.sku}
@@ -163,6 +181,7 @@ export default function NewInventoryPage() {
                 placeholder="CHR-WHT-001" className="form-input" />
             </div>
 
+            {/* Category */}
             <div className="space-y-1.5">
               <label className="form-label">Category <span className="text-red-500">*</span></label>
               <select value={form.category}
@@ -173,6 +192,7 @@ export default function NewInventoryPage() {
               {fieldErrors.category && <p className="text-xs text-red-600">{fieldErrors.category}</p>}
             </div>
 
+            {/* Tracking Type */}
             <div className="space-y-1.5">
               <label className="form-label">Tracking Type</label>
               <select value={form.tracking_type}
@@ -180,9 +200,11 @@ export default function NewInventoryPage() {
                 className="form-select">
                 <option value="bulk">Bulk (count-based)</option>
                 <option value="serialized">Serialized (individual)</option>
+                <option value="hybrid">Hybrid (flexible)</option>
               </select>
             </div>
 
+            {/* Rate / Day */}
             <div className="space-y-1.5">
               <label className="form-label">Rate / Day ($) <span className="text-red-500">*</span></label>
               <input type="number" min="0" step="0.01" value={form.rental_rate}
@@ -191,13 +213,15 @@ export default function NewInventoryPage() {
               {fieldErrors.rental_rate && <p className="text-xs text-red-600">{fieldErrors.rental_rate}</p>}
             </div>
 
-            <div className="space-y-1.5">
-              <label className="form-label">Replacement Cost ($)</label>
-              <input type="number" min="0" step="0.01" value={form.replacement_cost}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => set('replacement_cost', e.target.value)}
-                className="form-input" />
-            </div>
+            {/* Tracking type helper — full row */}
+            {trackingHelper && (
+              <div className="col-span-2 flex items-start gap-2 bg-muted/50 border border-border rounded-lg px-3 py-2.5">
+                <Info className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 mt-px" />
+                <p className="text-xs text-muted-foreground leading-relaxed">{trackingHelper}</p>
+              </div>
+            )}
 
+            {/* Quantity Owned */}
             <div className="space-y-1.5">
               <label className="form-label">Quantity Owned <span className="text-red-500">*</span></label>
               <input type="number" min="0" value={form.quantity_owned}
@@ -206,15 +230,7 @@ export default function NewInventoryPage() {
               {fieldErrors.quantity_owned && <p className="text-xs text-red-600">{fieldErrors.quantity_owned}</p>}
             </div>
 
-            <div className="space-y-1.5">
-              <label className="form-label">Reorder Point</label>
-              <input type="number" min="0" value={form.reorder_point}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => set('reorder_point', e.target.value)}
-                placeholder="e.g. 5"
-                className={`form-input ${fieldErrors.reorder_point ? 'border-red-400' : ''}`} />
-              {fieldErrors.reorder_point && <p className="text-xs text-red-600">{fieldErrors.reorder_point}</p>}
-            </div>
-
+            {/* Storage Location */}
             <div className="space-y-1.5">
               <label className="form-label">Storage Location</label>
               <input type="text" value={form.warehouse_location}
@@ -222,6 +238,17 @@ export default function NewInventoryPage() {
                 placeholder="Bay A" className="form-input" />
             </div>
 
+            {/* Serialized + large quantity soft warning */}
+            {showSerializedWarning && (
+              <div className="col-span-2 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-px" />
+                <p className="text-xs text-amber-700 leading-relaxed">
+                  Serialized inventory tracks individual assets separately. Large quantities are usually better suited for Bulk or Hybrid tracking.
+                </p>
+              </div>
+            )}
+
+            {/* Description */}
             <div className="col-span-2 space-y-1.5">
               <label className="form-label">Description</label>
               <textarea value={form.description}
@@ -232,22 +259,34 @@ export default function NewInventoryPage() {
           </div>
         </div>
 
-        {/* ── Valuation & depreciation ─────────────────────────────────────────── */}
+        {/* ── B. Financial & Depreciation ──────────────────────────────────────── */}
         <div className="bg-card border border-border rounded-xl p-6 space-y-4">
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Valuation & Depreciation</h3>
+            <h3 className="text-sm font-semibold text-foreground">Financial & Depreciation</h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Optional — for book value estimates and asset management.
+              Optional — for book value estimates and asset management. Not tax/accounting-grade.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-4">
+
+            {/* Unit Purchase Cost */}
             <div className="space-y-1.5">
-              <label className="form-label">Purchase Cost ($)</label>
+              <label className="form-label">Unit Purchase Cost ($)</label>
               <input type="number" min="0" step="0.01" value={form.purchase_cost}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => set('purchase_cost', e.target.value)}
                 placeholder="0.00" className="form-input" />
+              <p className="text-xs text-muted-foreground">Per-item acquisition cost used for valuation and depreciation estimates.</p>
             </div>
 
+            {/* Replacement Cost */}
+            <div className="space-y-1.5">
+              <label className="form-label">Replacement Cost ($)</label>
+              <input type="number" min="0" step="0.01" value={form.replacement_cost}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => set('replacement_cost', e.target.value)}
+                className="form-input" />
+            </div>
+
+            {/* Purchase Date */}
             <div className="space-y-1.5">
               <label className="form-label">Purchase Date</label>
               <input type="date" value={form.purchase_date}
@@ -255,6 +294,7 @@ export default function NewInventoryPage() {
                 className="form-input" />
             </div>
 
+            {/* Vendor */}
             <div className="space-y-1.5">
               <label className="form-label">Vendor / Supplier</label>
               <input type="text" value={form.vendor_name}
@@ -262,6 +302,7 @@ export default function NewInventoryPage() {
                 placeholder="ABC Rentals Supply Co." className="form-input" />
             </div>
 
+            {/* Depreciation Method */}
             <div className="space-y-1.5">
               <label className="form-label">Depreciation Method</label>
               <select value={form.depreciation_method}
@@ -297,10 +338,12 @@ export default function NewInventoryPage() {
           </div>
         </div>
 
-        {/* ── Default fees ─────────────────────────────────────────────────────── */}
+        {/* ── C. Risk & Recovery ───────────────────────────────────────────────── */}
         <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-          <h3 className="text-sm font-semibold text-foreground">Default Fees & Notes</h3>
+          <h3 className="text-sm font-semibold text-foreground">Risk & Recovery</h3>
           <div className="grid grid-cols-2 gap-4">
+
+            {/* Default Damage Fee */}
             <div className="space-y-1.5">
               <label className="form-label">Default Damage Fee ($)</label>
               <input type="number" min="0" step="0.01" value={form.damage_fee_default}
@@ -308,13 +351,28 @@ export default function NewInventoryPage() {
                 placeholder="0.00" className="form-input" />
             </div>
 
+            {/* Customer Replacement Charge */}
             <div className="space-y-1.5">
-              <label className="form-label">Default Replacement Fee ($)</label>
+              <label className="form-label">Customer Replacement Charge ($)</label>
               <input type="number" min="0" step="0.01" value={form.replacement_fee_default}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => set('replacement_fee_default', e.target.value)}
                 placeholder="0.00" className="form-input" />
             </div>
 
+            {/* Reorder Point */}
+            <div className="space-y-1.5">
+              <label className="form-label">Reorder Point</label>
+              <input type="number" min="0" value={form.reorder_point}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => set('reorder_point', e.target.value)}
+                placeholder="e.g. 5"
+                className={`form-input ${fieldErrors.reorder_point ? 'border-red-400' : ''}`} />
+              {fieldErrors.reorder_point && <p className="text-xs text-red-600">{fieldErrors.reorder_point}</p>}
+              <p className="text-xs text-muted-foreground">
+                When available quantity drops below this level, low-stock alerts will appear on the dashboard and reports.
+              </p>
+            </div>
+
+            {/* Condition Notes */}
             <div className="col-span-2 space-y-1.5">
               <label className="form-label">Condition Notes</label>
               <textarea value={form.condition_notes}
