@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Send,
-  Plus, Printer, DollarSign, Loader2, Mail, X, Info, Share2
+  Plus, Printer, DollarSign, Loader2, Mail, X, Info, Share2, Download
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -28,6 +28,7 @@ export default function InvoiceDetailPage() {
   const [loading, setLoading] = useState(true)
   const [statusSaving, setStatusSaving] = useState(false)
   const [receiptNotice, setReceiptNotice] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   const load = useCallback(async () => {
     if (!id || !profile?.company_id) return
@@ -62,22 +63,40 @@ export default function InvoiceDetailPage() {
     setStatusSaving(false)
   }
 
-  async function handleShare() {
-    const title = `Invoice ${invoice?.invoice_number ?? ''}`
-    const c = invoice?.customer as unknown as Customer | null
-    const text = c
-      ? `Invoice from Rentora for ${c.first_name} ${c.last_name}`.trim()
-      : 'Invoice from Rentora'
-    const url = window.location.href
-    if (navigator.share) {
-      try {
-        await navigator.share({ title, text, url })
-        return
-      } catch {
-        // User dismissed share sheet — fall through to print
+  async function handleExport() {
+    if (!invoice) return
+    setExporting(true)
+    try {
+      const { generateInvoicePdf } = await import('@/lib/generateInvoicePdf')
+      const blob = await generateInvoicePdf(
+        invoice as Parameters<typeof generateInvoicePdf>[0],
+        profile?.companies?.name ?? 'Rentora',
+      )
+      const fileName = `Rentora-Invoice-${invoice.invoice_number}.pdf`
+      const file = new File([blob], fileName, { type: 'application/pdf' })
+
+      // Try Web Share with file attachment (iOS 15+, Android Chrome 89+)
+      if (navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: fileName })
+          return
+        } catch {
+          // User dismissed — fall through to download
+        }
       }
+
+      // Fallback: trigger browser download
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = fileName
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } finally {
+      setExporting(false)
     }
-    window.print()
   }
 
   if (loading) {
@@ -145,11 +164,22 @@ export default function InvoiceDetailPage() {
               <span className="hidden sm:inline">Mark Sent</span>
             </button>
           )}
-          {/* Share/print — Web Share API on mobile, print fallback on desktop */}
-          <button onClick={handleShare} className="btn-ghost p-2" title="Share or print invoice">
-            {'share' in navigator
-              ? <Share2 className="w-4 h-4" />
-              : <Printer className="w-4 h-4" />}
+          {/* Download / Share PDF */}
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="btn-ghost p-2"
+            title={'canShare' in navigator ? 'Share invoice PDF' : 'Download invoice PDF'}
+          >
+            {exporting
+              ? <Loader2 className="w-4 h-4 animate-spin" />
+              : 'canShare' in navigator
+                ? <Share2 className="w-4 h-4" />
+                : <Download className="w-4 h-4" />}
+          </button>
+          {/* Print */}
+          <button onClick={() => window.print()} className="btn-ghost p-2" title="Print invoice">
+            <Printer className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -161,7 +191,7 @@ export default function InvoiceDetailPage() {
           <span>
             Receipt email is not connected yet.
             {customer?.email && <> Customer email on file: <strong>{customer.email}</strong>.</>}
-            {' '}Use <strong>Print Receipt</strong> to generate a PDF to share manually.
+            {' '}Use the <strong>Download</strong> or <strong>Share</strong> button to export a PDF you can send manually.
           </span>
           <button onClick={() => setReceiptNotice(false)} className="ml-auto btn-ghost p-1 flex-shrink-0">
             <X className="w-3.5 h-3.5" />
