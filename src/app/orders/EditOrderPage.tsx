@@ -4,6 +4,7 @@ import { ArrowLeft, Save, Loader2, AlertTriangle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { PageShell, PageHeader } from '@/components/common/PageShell'
+import { TimeSelect } from '@/components/common/TimeSelect'
 import type { RentalOrder } from '@/types/database'
 
 const EVENT_TYPES = ['wedding', 'birthday', 'corporate', 'graduation', 'quinceañera', 'anniversary', 'festival', 'religious', 'other']
@@ -218,16 +219,18 @@ export default function EditOrderPage() {
 
             <div className="space-y-1.5">
               <label className="form-label">Start Time</label>
-              <input type="time" value={form.event_start_time}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => patch('event_start_time', e.target.value)}
-                className="form-input" />
+              <TimeSelect
+                value={form.event_start_time}
+                onChange={(v) => patch('event_start_time', v)}
+              />
             </div>
 
             <div className="space-y-1.5">
               <label className="form-label">End Time</label>
-              <input type="time" value={form.event_end_time}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => patch('event_end_time', e.target.value)}
-                className="form-input" />
+              <TimeSelect
+                value={form.event_end_time}
+                onChange={(v) => patch('event_end_time', v)}
+              />
             </div>
           </div>
         </div>
@@ -294,9 +297,10 @@ export default function EditOrderPage() {
             </div>
             <div className="space-y-1.5">
               <label className="form-label">Delivery Time</label>
-              <input type="time" value={form.delivery_time}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => patch('delivery_time', e.target.value)}
-                className="form-input" />
+              <TimeSelect
+                value={form.delivery_time}
+                onChange={(v) => patch('delivery_time', v)}
+              />
             </div>
             <div className="space-y-1.5">
               <label className="form-label">Pickup Date</label>
@@ -306,9 +310,10 @@ export default function EditOrderPage() {
             </div>
             <div className="space-y-1.5">
               <label className="form-label">Pickup Time</label>
-              <input type="time" value={form.pickup_time}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => patch('pickup_time', e.target.value)}
-                className="form-input" />
+              <TimeSelect
+                value={form.pickup_time}
+                onChange={(v) => patch('pickup_time', v)}
+              />
             </div>
           </div>
         </div>

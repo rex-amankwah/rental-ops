@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Send,
-  Plus, Printer, DollarSign, Loader2, Mail, X, Info
+  Plus, Printer, DollarSign, Loader2, Mail, X, Info, Share2
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -62,6 +62,24 @@ export default function InvoiceDetailPage() {
     setStatusSaving(false)
   }
 
+  async function handleShare() {
+    const title = `Invoice ${invoice?.invoice_number ?? ''}`
+    const c = invoice?.customer as unknown as Customer | null
+    const text = c
+      ? `Invoice from Rentora for ${c.first_name} ${c.last_name}`.trim()
+      : 'Invoice from Rentora'
+    const url = window.location.href
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text, url })
+        return
+      } catch {
+        // User dismissed share sheet — fall through to print
+      }
+    }
+    window.print()
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -100,7 +118,7 @@ export default function InvoiceDetailPage() {
           </div>
           {order && <p className="text-sm text-muted-foreground mt-0.5">{order.order_number} · {order.event_name}</p>}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           {!isPaid && !isVoided && canEdit(appRole) && (
             <button onClick={() => navigate(`/payments/new?invoiceId=${invoice.id}`)} className="btn-primary">
               <Plus className="w-4 h-4" />
@@ -112,23 +130,26 @@ export default function InvoiceDetailPage() {
               {customer?.email && (
                 <button onClick={() => setReceiptNotice(true)} className="btn-secondary">
                   <Mail className="w-4 h-4" />
-                  Send Receipt
+                  <span className="hidden sm:inline">Send Receipt</span>
                 </button>
               )}
               <button onClick={() => window.print()} className="btn-primary">
                 <Printer className="w-4 h-4" />
-                Print Receipt
+                <span className="hidden sm:inline">Print Receipt</span>
               </button>
             </>
           )}
           {invoice.status === 'draft' && canEdit(appRole) && (
             <button onClick={markSent} disabled={statusSaving} className="btn-secondary">
               {statusSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              Mark Sent
+              <span className="hidden sm:inline">Mark Sent</span>
             </button>
           )}
-          <button onClick={() => window.print()} className="btn-ghost p-2">
-            <Printer className="w-4 h-4" />
+          {/* Share/print — Web Share API on mobile, print fallback on desktop */}
+          <button onClick={handleShare} className="btn-ghost p-2" title="Share or print invoice">
+            {'share' in navigator
+              ? <Share2 className="w-4 h-4" />
+              : <Printer className="w-4 h-4" />}
           </button>
         </div>
       </div>

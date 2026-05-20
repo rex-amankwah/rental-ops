@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, ChangeEvent, Fragment } from 'react'
+import { useState, useEffect, useCallback, ChangeEvent, Fragment } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, ArrowRight, Plus, Trash2, Search,
@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useAvailability } from '@/hooks/useAvailability'
 import { InputField, SelectField, TextareaField } from '@/components/common/FormField'
+import { TimeSelect } from '@/components/common/TimeSelect'
 import { formatCurrency } from '@/lib/constants'
 import type { Customer, InventoryCatalogItem } from '@/types/database'
 
@@ -259,10 +260,6 @@ function EventStep({ form, onChange }: {
   form: OrderFormData
   onChange: (k: keyof OrderFormData, v: string) => void
 }) {
-  // Refs for time inputs so we can blur them after selection
-  const deliveryTimeRef = useRef<HTMLInputElement | null>(null)
-  const pickupTimeRef = useRef<HTMLInputElement | null>(null)
-
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-4">
@@ -360,19 +357,11 @@ function EventStep({ form, onChange }: {
             value={form.delivery_date}
             onChange={(e: ChangeEvent<HTMLInputElement>) => onChange('delivery_date', e.target.value)}
           />
-          {/* Delivery time — blur on change so picker closes */}
           <div className="space-y-1.5">
             <label className="form-label">Delivery Time</label>
-            <input
-              ref={deliveryTimeRef}
-              type="time"
+            <TimeSelect
               value={form.delivery_time}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                onChange('delivery_time', e.target.value)
-                // Blur after a tick so the native time picker closes
-                setTimeout(() => deliveryTimeRef.current?.blur(), 0)
-              }}
-              className="form-input"
+              onChange={(v) => onChange('delivery_time', v)}
             />
           </div>
           <InputField
@@ -381,18 +370,11 @@ function EventStep({ form, onChange }: {
             value={form.pickup_date}
             onChange={(e: ChangeEvent<HTMLInputElement>) => onChange('pickup_date', e.target.value)}
           />
-          {/* Pickup time — blur on change */}
           <div className="space-y-1.5">
             <label className="form-label">Pickup Time</label>
-            <input
-              ref={pickupTimeRef}
-              type="time"
+            <TimeSelect
               value={form.pickup_time}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                onChange('pickup_time', e.target.value)
-                setTimeout(() => pickupTimeRef.current?.blur(), 0)
-              }}
-              className="form-input"
+              onChange={(v) => onChange('pickup_time', v)}
             />
           </div>
           <InputField
