@@ -1,17 +1,23 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Calendar, Truck, RotateCcw, Star, Loader2, AlertTriangle,
-  LayoutList, Columns, Clock,
+  LayoutList, Columns, Clock, CalendarDays,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { PageShell, PageHeader } from '@/components/common/PageShell'
 import { ORDER_STATUS_CONFIG, formatDate } from '@/lib/constants'
-import type { RentalOrder, Customer, OrderStatus } from '@/types/database'
+import type { OrderStatus } from '@/types/database'
+import CalendarGrid from './CalendarGrid'
+import type { GridSubView } from './CalendarGrid'
+import {
+  buildCalendarEvents,
+  fmtMonthYear, fmtWeekRange, fmtDayFull, startOfWeekSun,
+} from './calendarUtils'
+import type { OrderWithCustomer } from './calendarUtils'
 
-type OrderWithCustomer = RentalOrder & { customer: Customer | null }
-type ViewMode = 'agenda' | 'board'
+type ViewMode = 'agenda' | 'grid' | 'board'
 
 interface CalendarEntry {
   date: string
@@ -137,6 +143,9 @@ export default function CalendarPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('agenda')
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [range, setRange] = useState<'30' | '60' | '90'>('30')
+  // Grid-view state
+  const [gridSubView, setGridSubView] = useState<GridSubView>('week')
+  const [gridAnchor, setGridAnchor] = useState<Date>(() => new Date())
 
   const load = useCallback(async () => {
     if (!profile?.company_id) return
@@ -186,6 +195,9 @@ export default function CalendarPage() {
   const boardDeliveries = allEntries.filter(e => e.type === 'delivery')
   const boardPickups    = allEntries.filter(e => e.type === 'pickup')
 
+  // ─── Grid data (derived from same `orders` array via shared transformer) ──
+  const calendarEvents  = useMemo(() => buildCalendarEvents(orders), [orders])
+
   return (
     <PageShell>
       <PageHeader
@@ -193,13 +205,18 @@ export default function CalendarPage() {
         subtitle={
           viewMode === 'agenda'
             ? `${filtered.length} upcoming date${filtered.length !== 1 ? 's' : ''} · next ${range} days`
+            : viewMode === 'grid'
+            ? gridSubView === 'month' ? fmtMonthYear(gridAnchor)
+              : gridSubView === 'week' ? fmtWeekRange(startOfWeekSun(gridAnchor))
+              : fmtDayFull(gridAnchor)
             : `${orders.length} active order${orders.length !== 1 ? 's' : ''} · next ${range} days`
         }
       />
 
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-3">
-        {/* View toggle */}
+
+        {/* ── View tab selector: Agenda | Calendar | Board ─────────────────── */}
         <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
           <button
             onClick={() => setViewMode('agenda')}
@@ -208,6 +225,14 @@ export default function CalendarPage() {
             }`}
           >
             <LayoutList className="w-3.5 h-3.5" /> Agenda
+          </button>
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              viewMode === 'grid' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <CalendarDays className="w-3.5 h-3.5" /> Calendar
           </button>
           <button
             onClick={() => setViewMode('board')}
@@ -221,40 +246,65 @@ export default function CalendarPage() {
 
         <div className="w-px h-4 bg-border" />
 
-        {/* Type filter — agenda only */}
+        {/* ── Calendar sub-view: Day | Week | Month ────────────────────────── */}
+        {viewMode === 'grid' && (
+          <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
+            {(['day', 'week', 'month'] as const).map(sv => (
+              <button
+                key={sv}
+                onClick={() => setGridSubView(sv)}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium capitalize transition-colors ${
+                  gridSubView === sv
+                    ? 'bg-card shadow-sm text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {sv}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* ── Type filter — agenda only ────────────────────────────────────── */}
         {viewMode === 'agenda' && (
+          <div className="flex items-center gap-1">
+            {FILTER_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setTypeFilter(opt.value)}
+                className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                  typeFilter === opt.value
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* ── Range — agenda and board only (controls the data window) ─────── */}
+        {viewMode !== 'grid' && (
           <>
+            {viewMode === 'agenda' && <div className="w-px h-4 bg-border" />}
             <div className="flex items-center gap-1">
-              {FILTER_OPTIONS.map(opt => (
-                <button key={opt.value}
-                  onClick={() => setTypeFilter(opt.value)}
+              {(['30', '60', '90'] as const).map(r => (
+                <button
+                  key={r}
+                  onClick={() => setRange(r)}
                   className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                    typeFilter === opt.value
+                    range === r
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-muted text-muted-foreground hover:text-foreground'
-                  }`}>
-                  {opt.label}
+                  }`}
+                >
+                  {r}d
                 </button>
               ))}
             </div>
-            <div className="w-px h-4 bg-border" />
           </>
         )}
-
-        {/* Range */}
-        <div className="flex items-center gap-1">
-          {(['30', '60', '90'] as const).map(r => (
-            <button key={r}
-              onClick={() => setRange(r)}
-              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                range === r
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-muted-foreground hover:text-foreground'
-              }`}>
-              {r}d
-            </button>
-          ))}
-        </div>
       </div>
 
       {fetchError && (
@@ -267,6 +317,15 @@ export default function CalendarPage() {
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         </div>
+      ) : viewMode === 'grid' ? (
+        // ── CALENDAR GRID VIEW ──────────────────────────────────────────────
+        <CalendarGrid
+          events={calendarEvents}
+          anchor={gridAnchor}
+          gridSubView={gridSubView}
+          onSetAnchor={setGridAnchor}
+          onEventClick={id => navigate(`/orders/${id}`)}
+        />
       ) : viewMode === 'agenda' ? (
         // ── AGENDA VIEW ────────────────────────────────────────────────────
         filtered.length === 0 ? (
@@ -298,7 +357,7 @@ export default function CalendarPage() {
                       const cfg = TYPE_CONFIG[entry.type]
                       const Icon = cfg.icon
                       const order = entry.order
-                      const customer = order.customer as Customer | null
+                      const customer = order.customer
                       const statusCfg = ORDER_STATUS_CONFIG[order.status as OrderStatus]
 
                       return (
