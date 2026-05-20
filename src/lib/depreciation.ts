@@ -14,9 +14,12 @@ export interface DepreciationResult {
  * Returns null if the item lacks required configuration fields.
  */
 export function calcDepreciation(item: InventoryCatalogItem): DepreciationResult | null {
+  // Prefer unit_purchase_cost; fall back to purchase_cost for backward compatibility
+  const costBasis = item.unit_purchase_cost ?? item.purchase_cost
+
   if (
     item.depreciation_method !== 'straight_line' ||
-    item.purchase_cost == null || item.purchase_cost <= 0 ||
+    costBasis == null || costBasis <= 0 ||
     item.expected_lifespan_months == null || item.expected_lifespan_months <= 0 ||
     item.purchase_date == null
   ) {
@@ -24,7 +27,7 @@ export function calcDepreciation(item: InventoryCatalogItem): DepreciationResult
   }
 
   const residual = item.residual_value ?? 0
-  const depreciableAmount = Math.max(0, item.purchase_cost - residual)
+  const depreciableAmount = Math.max(0, costBasis - residual)
   const monthlyRate = depreciableAmount / item.expected_lifespan_months
 
   const purchaseDate = new Date(item.purchase_date)
@@ -36,9 +39,9 @@ export function calcDepreciation(item: InventoryCatalogItem): DepreciationResult
   )
 
   const accumulated = Math.min(depreciableAmount, monthlyRate * monthsElapsed)
-  const bookValue = Math.max(residual, item.purchase_cost - accumulated)
+  const bookValue = Math.max(residual, costBasis - accumulated)
   const percentDepreciated =
-    item.purchase_cost > 0 ? (accumulated / item.purchase_cost) * 100 : 0
+    costBasis > 0 ? (accumulated / costBasis) * 100 : 0
 
   return {
     monthsElapsed,

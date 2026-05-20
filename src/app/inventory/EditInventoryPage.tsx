@@ -18,7 +18,7 @@ interface InventoryForm {
   warehouse_location: string
   description: string
   // Valuation
-  purchase_cost: string
+  unit_purchase_cost: string
   vendor_name: string
   purchase_date: string
   expected_lifespan_months: string
@@ -49,7 +49,8 @@ function toForm(item: InventoryCatalogItem): InventoryForm {
     quantity_owned:            String(item.quantity_owned),
     warehouse_location:        item.warehouse_location ?? '',
     description:               item.description ?? '',
-    purchase_cost:             item.purchase_cost != null ? String(item.purchase_cost) : '',
+    unit_purchase_cost:        item.unit_purchase_cost != null ? String(item.unit_purchase_cost)
+                               : item.purchase_cost != null ? String(item.purchase_cost) : '',
     vendor_name:               item.vendor_name ?? '',
     purchase_date:             item.purchase_date ?? '',
     expected_lifespan_months:  item.expected_lifespan_months != null ? String(item.expected_lifespan_months) : '',
@@ -136,7 +137,7 @@ export default function EditInventoryPage() {
           quantity_available:        newAvailable,
           warehouse_location:        form.warehouse_location.trim() || null,
           description:               form.description.trim() || null,
-          purchase_cost:             form.purchase_cost ? parseFloat(form.purchase_cost) : null,
+          unit_purchase_cost:        form.unit_purchase_cost ? parseFloat(form.unit_purchase_cost) : null,
           vendor_name:               form.vendor_name.trim() || null,
           purchase_date:             form.purchase_date || null,
           expected_lifespan_months:  form.expected_lifespan_months ? parseInt(form.expected_lifespan_months) : null,
@@ -323,8 +324,8 @@ export default function EditInventoryPage() {
             {/* Unit Purchase Cost */}
             <div className="space-y-1.5">
               <label className="form-label">Unit Purchase Cost ($)</label>
-              <input type="number" min="0" step="0.01" value={form.purchase_cost}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => patch('purchase_cost', e.target.value)}
+              <input type="number" min="0" step="0.01" value={form.unit_purchase_cost}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => patch('unit_purchase_cost', e.target.value)}
                 placeholder="0.00" className="form-input" />
               <p className="text-xs text-muted-foreground">Per-item acquisition cost used for valuation and depreciation estimates.</p>
             </div>

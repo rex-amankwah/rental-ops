@@ -17,7 +17,7 @@ interface InventoryDraft {
   warehouse_location: string
   description: string
   // Valuation
-  purchase_cost: string
+  unit_purchase_cost: string
   vendor_name: string
   purchase_date: string
   expected_lifespan_months: string
@@ -33,7 +33,7 @@ const BLANK: InventoryDraft = {
   name: '', sku: '', category: 'chairs', tracking_type: 'bulk',
   rental_rate: '0', replacement_cost: '0', quantity_owned: '0',
   warehouse_location: '', description: '',
-  purchase_cost: '', vendor_name: '', purchase_date: '',
+  unit_purchase_cost: '', vendor_name: '', purchase_date: '',
   expected_lifespan_months: '', depreciation_method: 'none',
   residual_value: '0', damage_fee_default: '', replacement_fee_default: '',
   condition_notes: '', reorder_point: '',
@@ -112,7 +112,7 @@ export default function NewInventoryPage() {
         quantity_under_repair:       0,
         warehouse_location:          form.warehouse_location.trim() || null,
         description:                 form.description.trim() || null,
-        purchase_cost:               form.purchase_cost ? parseFloat(form.purchase_cost) : null,
+        unit_purchase_cost:          form.unit_purchase_cost ? parseFloat(form.unit_purchase_cost) : null,
         vendor_name:                 form.vendor_name.trim() || null,
         purchase_date:               form.purchase_date || null,
         expected_lifespan_months:    form.expected_lifespan_months ? parseInt(form.expected_lifespan_months) : null,
@@ -272,8 +272,8 @@ export default function NewInventoryPage() {
             {/* Unit Purchase Cost */}
             <div className="space-y-1.5">
               <label className="form-label">Unit Purchase Cost ($)</label>
-              <input type="number" min="0" step="0.01" value={form.purchase_cost}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => set('purchase_cost', e.target.value)}
+              <input type="number" min="0" step="0.01" value={form.unit_purchase_cost}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => set('unit_purchase_cost', e.target.value)}
                 placeholder="0.00" className="form-input" />
               <p className="text-xs text-muted-foreground">Per-item acquisition cost used for valuation and depreciation estimates.</p>
             </div>

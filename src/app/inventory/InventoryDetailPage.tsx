@@ -260,7 +260,7 @@ export default function InventoryDetailPage() {
               value={item.damage_fee_default != null ? formatCurrency(item.damage_fee_default) : '—'}
             />
             <FieldRow
-              label="Default Replace Fee"
+              label="Customer Replacement Charge"
               value={item.replacement_fee_default != null ? formatCurrency(item.replacement_fee_default) : '—'}
             />
             <FieldRow label="Vendor" value={item.vendor_name ?? '—'} />
@@ -287,21 +287,52 @@ export default function InventoryDetailPage() {
           {/* Cost basis */}
           <div className="bg-card border border-border rounded-xl p-5">
             <SectionHeader icon={DollarSign} title="Cost Basis" />
-            <FieldRow label="Purchase Cost" value={item.purchase_cost != null ? formatCurrency(item.purchase_cost) : '—'} />
-            <FieldRow label="Replacement Cost" value={item.replacement_cost ? formatCurrency(item.replacement_cost) : '—'} />
-            <FieldRow label="Purchase Date" value={item.purchase_date ? formatDate(item.purchase_date) : '—'} />
-            <FieldRow label="Vendor" value={item.vendor_name ?? '—'} />
+            {(() => {
+              const unitCost = item.unit_purchase_cost ?? item.purchase_cost
+              const totalAssetValue = unitCost != null ? unitCost * item.quantity_owned : null
+              return (
+                <>
+                  <FieldRow
+                    label="Unit Purchase Cost"
+                    value={
+                      <span>
+                        {unitCost != null ? formatCurrency(unitCost) : '—'}
+                        {unitCost != null && (
+                          <span className="text-xs text-muted-foreground ml-1">/ item</span>
+                        )}
+                      </span>
+                    }
+                  />
+                  {totalAssetValue != null && (
+                    <FieldRow
+                      label="Total Asset Value"
+                      value={
+                        <span className="font-semibold text-foreground">
+                          {formatCurrency(totalAssetValue)}
+                          <span className="text-xs text-muted-foreground font-normal ml-1">
+                            ({item.quantity_owned} × {formatCurrency(unitCost!)})
+                          </span>
+                        </span>
+                      }
+                    />
+                  )}
+                  <FieldRow label="Replacement Cost" value={item.replacement_cost ? formatCurrency(item.replacement_cost) : '—'} />
+                  <FieldRow label="Purchase Date" value={item.purchase_date ? formatDate(item.purchase_date) : '—'} />
+                  <FieldRow label="Vendor" value={item.vendor_name ?? '—'} />
 
-            {item.purchase_cost != null && item.replacement_cost > 0 && (
-              <div className="mt-4 p-3 bg-muted/50 rounded-lg text-sm">
-                <p className="text-muted-foreground mb-1">Replacement premium</p>
-                <p className={`font-semibold ${item.replacement_cost > item.purchase_cost ? 'text-amber-600' : 'text-emerald-600'}`}>
-                  {item.replacement_cost > item.purchase_cost ? '+' : ''}
-                  {formatCurrency(item.replacement_cost - item.purchase_cost)}
-                  {' '}({item.purchase_cost > 0 ? ((item.replacement_cost - item.purchase_cost) / item.purchase_cost * 100).toFixed(0) : 0}%)
-                </p>
-              </div>
-            )}
+                  {unitCost != null && item.replacement_cost > 0 && (
+                    <div className="mt-4 p-3 bg-muted/50 rounded-lg text-sm">
+                      <p className="text-muted-foreground mb-1">Replacement premium</p>
+                      <p className={`font-semibold ${item.replacement_cost > unitCost ? 'text-amber-600' : 'text-emerald-600'}`}>
+                        {item.replacement_cost > unitCost ? '+' : ''}
+                        {formatCurrency(item.replacement_cost - unitCost)}
+                        {' '}({unitCost > 0 ? ((item.replacement_cost - unitCost) / unitCost * 100).toFixed(0) : 0}%)
+                      </p>
+                    </div>
+                  )}
+                </>
+              )
+            })()}
           </div>
 
           {/* Depreciation */}

@@ -125,6 +125,9 @@ export interface InventoryCatalogItem {
   updated_at: string
   // Valuation & master-data — added by migration 20260515_inventory_valuation_fields.sql
   purchase_cost: number | null
+  // Per-unit cost architecture — added by migration 20260520_unit_purchase_cost.sql
+  // Depreciation engine uses unit_purchase_cost ?? purchase_cost (backward compat)
+  unit_purchase_cost: number | null
   vendor_name: string | null
   purchase_date: string | null
   expected_lifespan_months: number | null
