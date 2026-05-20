@@ -65,14 +65,19 @@ export default function TeamPage() {
 
     setNameSaving(member.id)
     setError(null)
-    const { error: err } = await supabase
+    const { data: updated, error: err } = await supabase
       .from('profiles')
       .update({ full_name: trimmed, updated_at: new Date().toISOString() })
       .eq('id', member.id)
       .eq('company_id', myProfile!.company_id)
+      .select('id, full_name')
     setNameSaving(null)
 
     if (err) { setError(err.message); return }
+    if (!updated || updated.length === 0) {
+      setError('Name update was blocked — you may not have permission to edit this profile. Reload to confirm current state.')
+      return
+    }
     setMembers(prev => prev.map(m => m.id === member.id ? { ...m, full_name: trimmed } : m))
     cancelEditName()
     flash(`Name updated to "${trimmed}".`)
@@ -139,14 +144,19 @@ export default function TeamPage() {
     setSaving(member.id)
     // Convert AppRole → raw DB value before writing
     const dbRole = fromAppRole(newRole)
-    const { error: err } = await supabase
+    const { data: updated, error: err } = await supabase
       .from('profiles')
       .update({ role: dbRole, updated_at: new Date().toISOString() })
       .eq('id', member.id)
       .eq('company_id', myProfile!.company_id)
+      .select('id, role')
     setSaving(null)
 
     if (err) { setError(err.message); return }
+    if (!updated || updated.length === 0) {
+      setError('Role update was blocked — you may not have permission to modify this profile. Reload to confirm current state.')
+      return
+    }
     setMembers(prev => prev.map(m => m.id === member.id ? { ...m, role: newRole } : m))
     flash(`${member.full_name ?? member.email} is now ${ROLE_COLORS[newRole]?.label ?? newRole}.`)
   }
@@ -171,14 +181,19 @@ export default function TeamPage() {
 
     const newActive = !member.is_active
     setSaving(member.id)
-    const { error: err } = await supabase
+    const { data: updated, error: err } = await supabase
       .from('profiles')
       .update({ is_active: newActive, updated_at: new Date().toISOString() })
       .eq('id', member.id)
       .eq('company_id', myProfile!.company_id)
+      .select('id, is_active')
     setSaving(null)
 
     if (err) { setError(err.message); return }
+    if (!updated || updated.length === 0) {
+      setError('Active status update was blocked — you may not have permission to modify this profile. Reload to confirm current state.')
+      return
+    }
     setMembers(prev => prev.map(m => m.id === member.id ? { ...m, is_active: newActive } : m))
     flash(`${member.full_name ?? member.email} ${newActive ? 'activated' : 'deactivated'}.`)
   }
