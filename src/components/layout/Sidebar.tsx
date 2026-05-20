@@ -1,12 +1,11 @@
-import type React from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, ClipboardList, Calendar, Package, Truck,
   FileText, CreditCard, Users, RotateCcw, AlertTriangle,
-  Receipt, BarChart3, Settings, Building2, Tent, ChevronRight, BookOpen
+  Receipt, BarChart3, Settings, Tent, ChevronRight, BookOpen
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { isAdmin, canEdit } from '@/lib/roles'
+import { isAdmin } from '@/lib/roles'
 import { getInitials } from '@/lib/constants'
 
 const ICON_MAP = {
@@ -121,32 +120,23 @@ export default function Sidebar() {
           </div>
         ))}
 
-        {/* Settings section — admin sees all three links; staff sees Company Settings only */}
-        {(adminUser || canEdit(appRole)) && (
+        {/* Settings — admin-only; sub-pages are reached from the hub */}
+        {adminUser && (
           <div>
             <p className="text-[10px] font-semibold text-sidebar-foreground/35 uppercase tracking-widest px-3 mb-1">
               Settings
             </p>
             <div className="space-y-0.5">
-              {[
-                adminUser && { href: '/settings',         label: 'Settings',         icon: Settings  },
-                             { href: '/settings/company', label: 'Company Settings', icon: Building2 },
-                adminUser && { href: '/settings/team',    label: 'Team & Roles',     icon: Users     },
-              ].filter(Boolean).map((item) => {
-                const { href, label, icon: Icon } = item as { href: string; label: string; icon: React.ElementType }
-                const active = isActive(href)
+              {(() => {
+                const active = isActive('/settings')
                 return (
-                  <NavLink
-                    key={href}
-                    to={href}
-                    className={`sidebar-link ${active ? 'active' : ''}`}
-                  >
-                    <Icon className="w-4 h-4 flex-shrink-0" />
-                    <span className="flex-1 truncate">{label}</span>
+                  <NavLink to="/settings" className={`sidebar-link ${active ? 'active' : ''}`}>
+                    <Settings className="w-4 h-4 flex-shrink-0" />
+                    <span className="flex-1 truncate">Settings</span>
                     {active && <ChevronRight className="w-3 h-3 opacity-50" />}
                   </NavLink>
                 )
-              })}
+              })()}
             </div>
           </div>
         )}

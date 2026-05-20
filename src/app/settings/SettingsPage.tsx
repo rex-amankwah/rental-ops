@@ -4,18 +4,18 @@ import { useAuth } from '@/hooks/useAuth'
 
 const SECTIONS = [
   {
-    title: 'Team & Roles',
-    description: 'View team members, assign roles, and manage access levels.',
-    icon: Users,
-    href: '/settings/team',
-    badge: 'Active',
-    badgeCls: 'bg-emerald-100 text-emerald-700',
-  },
-  {
     title: 'Company Settings',
     description: 'Update company name, contact info, branding, and address.',
     icon: Building2,
     href: '/settings/company',
+    badge: 'Active',
+    badgeCls: 'bg-emerald-100 text-emerald-700',
+  },
+  {
+    title: 'Team & Roles',
+    description: 'View team members, assign roles, and manage access levels.',
+    icon: Users,
+    href: '/settings/team',
     badge: 'Active',
     badgeCls: 'bg-emerald-100 text-emerald-700',
   },
@@ -45,7 +45,7 @@ export default function SettingsPage() {
               disabled={!section.href}
               className={`bg-card border border-border rounded-xl p-5 text-left space-y-3 transition-all group ${
                 section.href
-                  ? 'hover:border-primary/40 hover:shadow-sm cursor-pointer'
+                  ? 'hover:border-primary/60 hover:shadow-md hover:bg-accent/20 cursor-pointer'
                   : 'opacity-60 cursor-not-allowed'
               }`}
             >
@@ -56,7 +56,7 @@ export default function SettingsPage() {
                 <div className="flex items-center gap-2">
                   <span className={`badge text-[10px] ${section.badgeCls}`}>{section.badge}</span>
                   {section.href && (
-                    <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                    <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                   )}
                 </div>
               </div>
@@ -125,9 +125,10 @@ export default function SettingsPage() {
       <div className="bg-card border border-border rounded-xl p-4 flex items-start gap-3">
         <Shield className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-xs font-semibold text-foreground">Settings are admin-only</p>
+          <p className="text-xs font-semibold text-foreground">Access control</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Only admin users can view or modify settings. Staff and viewers cannot access this area.
+            Company Settings is accessible to admins and staff. Team &amp; Roles is admin-only.
+            Viewers cannot access any settings area.
           </p>
         </div>
       </div>
