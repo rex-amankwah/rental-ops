@@ -13,11 +13,11 @@ const SECTIONS = [
   },
   {
     title: 'Company Settings',
-    description: 'Update company information, branding, and operational defaults.',
+    description: 'Update company name, contact info, branding, and address.',
     icon: Building2,
-    href: null,
-    badge: 'Coming Soon',
-    badgeCls: 'bg-muted text-muted-foreground',
+    href: '/settings/company',
+    badge: 'Active',
+    badgeCls: 'bg-emerald-100 text-emerald-700',
   },
 ]
 
@@ -117,8 +117,7 @@ export default function SettingsPage() {
             )}
           </div>
           <p className="text-[11px] text-muted-foreground pt-1 border-t border-border">
-            To update company details, contact your Supabase administrator or use the
-            Supabase Dashboard → Table Editor → companies.
+            Update company details in <strong>Settings → Company Settings</strong>.
           </p>
         </div>
       )}

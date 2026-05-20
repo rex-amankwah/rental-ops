@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, ReactNode } from 'react'
 import {
   TrendingUp, Users, AlertTriangle, Loader2,
-  Receipt, Truck, ShieldAlert, Package
+  Receipt, Truck, ShieldAlert, Package, BarChart3
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -86,13 +86,20 @@ function Stat({ label, value, sub, warn }: {
   )
 }
 
-function PlannedItem({ title }: { title: string }) {
+function PlannedItem({ title, description }: { title: string; description?: string }) {
   return (
-    <div className="flex items-center justify-between bg-muted/20 border border-dashed border-border rounded-lg px-4 py-2.5">
-      <span className="text-sm text-muted-foreground">{title}</span>
-      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 bg-muted px-2 py-0.5 rounded-full flex-shrink-0 ml-3">
-        Planned
-      </span>
+    <div className="bg-muted/20 border border-dashed border-border rounded-lg px-4 py-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm text-muted-foreground font-medium">{title}</p>
+          {description && (
+            <p className="text-xs text-muted-foreground/70 mt-0.5 leading-relaxed">{description}</p>
+          )}
+        </div>
+        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 bg-muted px-2 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap">
+          Phase 3
+        </span>
+      </div>
     </div>
   )
 }
@@ -364,7 +371,7 @@ export default function ReportsPage() {
           {/* ── 1. Accounting ─────────────────────────────────────────────── */}
           <Section
             icon={<TrendingUp className="w-4 h-4" />}
-            title="Accounting"
+            title="Accounting Report"
             subtitle="Revenue, collections, expenses, and profit estimate"
           >
             <StatGrid>
@@ -420,13 +427,12 @@ export default function ReportsPage() {
               </table>
             </div>
 
-            {/* Phase 3 */}
             <div>
-              <SectionLabel>Planned Exports</SectionLabel>
+              <SectionLabel>Coming in Phase 3</SectionLabel>
               <div className="space-y-2">
-                <PlannedItem title="Export All Payments to CSV" />
-                <PlannedItem title="Export Expense Summary to CSV" />
-                <PlannedItem title="Generate PDF Financial Report" />
+                <PlannedItem title="Export All Payments to CSV" description="Download a full payment history with dates, amounts, types, and references." />
+                <PlannedItem title="Export Expense Summary to CSV" description="Export all recorded expenses grouped by category and date range." />
+                <PlannedItem title="Generate PDF Financial Report" description="Printable revenue and expense summary for a selected month or quarter." />
               </div>
             </div>
           </Section>
@@ -434,7 +440,7 @@ export default function ReportsPage() {
           {/* ── 2. Tax ────────────────────────────────────────────────────── */}
           <Section
             icon={<Receipt className="w-4 h-4" />}
-            title="Tax"
+            title="Tax Report"
             subtitle="Tax collected on paid invoices"
           >
             <StatGrid cols={2}>
@@ -451,12 +457,12 @@ export default function ReportsPage() {
             </StatGrid>
 
             <div>
-              <SectionLabel>Planned Exports</SectionLabel>
+              <SectionLabel>Coming in Phase 3</SectionLabel>
               <div className="space-y-2">
-                <PlannedItem title="Exempt / Non-Taxable Sales Breakdown" />
-                <PlannedItem title="Quarterly Tax Summary" />
-                <PlannedItem title="Year-End Tax Report" />
-                <PlannedItem title="Export Tax Data to CSV" />
+                <PlannedItem title="Exempt / Non-Taxable Sales Breakdown" description="Itemized list of orders and invoices where no tax was applied." />
+                <PlannedItem title="Quarterly Tax Summary" description="Three-month tax collected vs. taxable sales summary for filing prep." />
+                <PlannedItem title="Year-End Tax Report" description="Annual tax collected totals, organized by quarter and category." />
+                <PlannedItem title="Export Tax Data to CSV" description="Raw tax data export with invoice numbers and amounts for accountants." />
               </div>
             </div>
           </Section>
@@ -464,7 +470,7 @@ export default function ReportsPage() {
           {/* ── 3. Management ─────────────────────────────────────────────── */}
           <Section
             icon={<Users className="w-4 h-4" />}
-            title="Management"
+            title="Management Report"
             subtitle="Order performance, top customers, inventory, and damage"
           >
             <StatGrid>
@@ -561,7 +567,7 @@ export default function ReportsPage() {
           {/* ── 4. Operations ─────────────────────────────────────────────── */}
           <Section
             icon={<Truck className="w-4 h-4" />}
-            title="Operations"
+            title="Operations Report"
             subtitle="Upcoming deliveries, pickups, and open issues"
           >
             <StatGrid>
@@ -653,6 +659,87 @@ export default function ReportsPage() {
                 </span>
               </div>
             )}
+          </Section>
+
+          {/* ── 5. Inventory ──────────────────────────────────────────────── */}
+          <Section
+            icon={<BarChart3 className="w-4 h-4" />}
+            title="Inventory Report"
+            subtitle="Utilization, stock levels, and damage — valuation exports in Phase 3"
+          >
+            <StatGrid>
+              <Stat
+                label="Total Units Owned"
+                value={data.totalOwned.toLocaleString()}
+                sub="Active catalog items"
+              />
+              <Stat
+                label="Units Currently Out"
+                value={data.totalOut.toLocaleString()}
+                sub={data.totalOwned > 0 ? `${data.inventoryUtilization}% utilization` : undefined}
+              />
+              <Stat
+                label="Open Damage Reports"
+                value={data.openDamages}
+                warn={data.openDamages > 0}
+                sub="Unresolved / not closed"
+              />
+              <Stat
+                label="Estimated Damage Cost"
+                value={formatCurrency(data.damageCost)}
+                warn={data.damageCost > 0}
+                sub="All time, all reports"
+              />
+            </StatGrid>
+
+            {data.inventoryUtilization > 0 && (
+              <div>
+                <SectionLabel>Utilization</SectionLabel>
+                <div className="bg-muted/40 rounded-lg px-4 py-3">
+                  <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
+                    <span>{data.totalOut} units out of {data.totalOwned} owned</span>
+                    <span className={`font-semibold ${data.inventoryUtilization > 80 ? 'text-red-600' : data.inventoryUtilization > 50 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                      {data.inventoryUtilization}%
+                    </span>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        data.inventoryUtilization > 80 ? 'bg-red-500' :
+                        data.inventoryUtilization > 50 ? 'bg-amber-400' : 'bg-emerald-500'
+                      }`}
+                      style={{ width: `${Math.min(100, data.inventoryUtilization)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <SectionLabel>Coming in Phase 3</SectionLabel>
+              <div className="space-y-2">
+                <PlannedItem
+                  title="Inventory Valuation Summary"
+                  description="Total purchase cost, replacement value, and estimated current book value across all catalog items."
+                />
+                <PlannedItem
+                  title="Depreciation Schedule"
+                  description="Per-item straight-line depreciation breakdown with accumulated depreciation and projected end-of-life."
+                />
+                <PlannedItem
+                  title="Asset Status Report"
+                  description="Serialized asset condition tracking — excellent / good / fair / poor / damaged counts by category."
+                />
+                <PlannedItem
+                  title="Low Stock & Reorder Report"
+                  description="Items at or below their reorder point, grouped by category, with last rental date."
+                />
+                <PlannedItem
+                  title="Export Inventory to CSV"
+                  description="Full catalog export with quantities, costs, and valuation fields."
+                />
+              </div>
+            </div>
           </Section>
 
         </div>
