@@ -1,3 +1,4 @@
+import type React from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, ClipboardList, Calendar, Package, Truck,
@@ -5,7 +6,7 @@ import {
   Receipt, BarChart3, Settings, Building2, Tent, ChevronRight, BookOpen
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { isAdmin } from '@/lib/roles'
+import { isAdmin, canEdit } from '@/lib/roles'
 import { getInitials } from '@/lib/constants'
 
 const ICON_MAP = {
@@ -120,18 +121,19 @@ export default function Sidebar() {
           </div>
         ))}
 
-        {/* Admin-only Settings section */}
-        {adminUser && (
+        {/* Settings section — admin sees all three links; staff sees Company Settings only */}
+        {(adminUser || canEdit(appRole)) && (
           <div>
             <p className="text-[10px] font-semibold text-sidebar-foreground/35 uppercase tracking-widest px-3 mb-1">
               Settings
             </p>
             <div className="space-y-0.5">
               {[
-                { href: '/settings',         label: 'Settings',         icon: Settings  },
-                { href: '/settings/company', label: 'Company Settings', icon: Building2 },
-                { href: '/settings/team',    label: 'Team & Roles',     icon: Users     },
-              ].map(({ href, label, icon: Icon }) => {
+                adminUser && { href: '/settings',         label: 'Settings',         icon: Settings  },
+                             { href: '/settings/company', label: 'Company Settings', icon: Building2 },
+                adminUser && { href: '/settings/team',    label: 'Team & Roles',     icon: Users     },
+              ].filter(Boolean).map((item) => {
+                const { href, label, icon: Icon } = item as { href: string; label: string; icon: React.ElementType }
                 const active = isActive(href)
                 return (
                   <NavLink

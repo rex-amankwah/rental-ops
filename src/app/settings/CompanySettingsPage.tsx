@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Save, Loader2, AlertTriangle, Building2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { isAdmin } from '@/lib/roles'
 import { PageShell, PageHeader } from '@/components/common/PageShell'
 
 interface CompanyForm {
@@ -42,8 +43,11 @@ function toForm(co: Record<string, unknown>): CompanyForm {
 }
 
 export default function CompanySettingsPage() {
-  const { profile } = useAuth()
+  const { profile, appRole } = useAuth()
   const navigate = useNavigate()
+  // Staff users are sent back to the dashboard since /settings is admin-only
+  const backPath = isAdmin(appRole) ? '/settings' : '/'
+  const backLabel = isAdmin(appRole) ? 'Settings' : 'Dashboard'
 
   const [form, setForm] = useState<CompanyForm>(BLANK)
   const [loading, setLoading] = useState(true)
@@ -130,8 +134,8 @@ export default function CompanySettingsPage() {
         title="Company Settings"
         subtitle="Update branding, contact information, and business address"
         actions={
-          <button onClick={() => navigate('/settings')} className="btn-secondary">
-            <ArrowLeft className="w-4 h-4" /> Settings
+          <button onClick={() => navigate(backPath)} className="btn-secondary">
+            <ArrowLeft className="w-4 h-4" /> {backLabel}
           </button>
         }
       />
@@ -267,7 +271,7 @@ export default function CompanySettingsPage() {
         </div>
 
         <div className="flex justify-between">
-          <button onClick={() => navigate('/settings')} className="btn-secondary" disabled={saving}>
+          <button onClick={() => navigate(backPath)} className="btn-secondary" disabled={saving}>
             Cancel
           </button>
           <button onClick={save} className="btn-primary" disabled={saving}>

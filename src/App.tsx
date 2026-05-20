@@ -157,7 +157,7 @@ function AppRoutes() {
         <Route path="help"          element={<HelpPage />} />
         <Route path="settings"         element={<RoleGuard require="admin"><SettingsPage /></RoleGuard>} />
         <Route path="settings/team"    element={<RoleGuard require="admin"><TeamPage /></RoleGuard>} />
-        <Route path="settings/company" element={<RoleGuard require="admin"><CompanySettingsPage /></RoleGuard>} />
+        <Route path="settings/company" element={<RoleGuard require="staff"><CompanySettingsPage /></RoleGuard>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
