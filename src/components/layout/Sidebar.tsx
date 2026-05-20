@@ -61,7 +61,12 @@ const NAV_SECTIONS = [
   },
 ]
 
-export default function Sidebar() {
+interface SidebarProps {
+  open: boolean
+  onClose: () => void
+}
+
+export default function Sidebar({ open, onClose }: SidebarProps) {
   const { profile, appRole, signOut } = useAuth()
   const location = useLocation()
   const adminUser = isAdmin(appRole)
@@ -72,7 +77,20 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="flex flex-col w-60 flex-shrink-0 bg-sidebar border-r border-sidebar-border">
+    <aside
+      className={[
+        // Mobile: fixed overlay drawer, slides in from left
+        'fixed inset-y-0 left-0 z-30',
+        // Desktop: static, always in flow
+        'sm:static sm:z-auto',
+        // Dimensions and appearance
+        'flex flex-col w-60 flex-shrink-0 bg-sidebar border-r border-sidebar-border',
+        // Slide transition
+        'transition-transform duration-200 ease-in-out',
+        // Open/closed — sm:translate-x-0 keeps it visible on desktop regardless
+        open ? 'translate-x-0' : '-translate-x-full sm:translate-x-0',
+      ].join(' ')}
+    >
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-4 py-5 border-b border-sidebar-border">
         <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden bg-primary">
@@ -110,6 +128,7 @@ export default function Sidebar() {
                     key={item.href}
                     to={item.href}
                     className={`sidebar-link ${active ? 'active' : ''}`}
+                    onClick={onClose}
                   >
                     <Icon className="w-4 h-4 flex-shrink-0" />
                     <span className="flex-1 truncate">{item.label}</span>
@@ -131,7 +150,7 @@ export default function Sidebar() {
               {(() => {
                 const active = isActive('/settings')
                 return (
-                  <NavLink to="/settings" className={`sidebar-link ${active ? 'active' : ''}`}>
+                  <NavLink to="/settings" className={`sidebar-link ${active ? 'active' : ''}`} onClick={onClose}>
                     <Settings className="w-4 h-4 flex-shrink-0" />
                     <span className="flex-1 truncate">Settings</span>
                     {active && <ChevronRight className="w-3 h-3 opacity-50" />}
@@ -148,6 +167,7 @@ export default function Sidebar() {
         {adminUser ? (
           <NavLink
             to="/settings"
+            onClick={onClose}
             className="flex items-center gap-2.5 p-2 rounded-md hover:bg-sidebar-accent transition-colors group"
           >
             <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">

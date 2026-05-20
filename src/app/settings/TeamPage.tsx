@@ -286,7 +286,7 @@ export default function TeamPage() {
               return (
                 <div
                   key={member.id}
-                  className={`group px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3 transition-opacity ${
+                  className={`group px-3 sm:px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3 transition-opacity ${
                     !member.is_active ? 'opacity-55' : ''
                   }`}
                 >
@@ -371,7 +371,7 @@ export default function TeamPage() {
                   </div>
 
                   {/* Controls */}
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
                     {isSaving && (
                       <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
                     )}

@@ -1,4 +1,4 @@
-import { Bell, Search } from 'lucide-react'
+import { Bell, Menu, Search } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 
 const PAGE_TITLES: Record<string, { title: string }> = {
@@ -17,7 +17,11 @@ const PAGE_TITLES: Record<string, { title: string }> = {
   '/settings':  { title: 'Settings' },
 }
 
-export default function TopBar() {
+interface TopBarProps {
+  onMenuClick: () => void
+}
+
+export default function TopBar({ onMenuClick }: TopBarProps) {
   const location = useLocation()
 
   const pageKey = Object.keys(PAGE_TITLES)
@@ -27,14 +31,23 @@ export default function TopBar() {
   const pageConfig = pageKey ? PAGE_TITLES[pageKey] : { title: 'Rentora' }
 
   return (
-    <header className="flex items-center gap-4 px-6 h-14 border-b border-border bg-background flex-shrink-0">
+    <header className="flex items-center gap-3 px-3 sm:px-6 h-14 border-b border-border bg-background flex-shrink-0">
+      {/* Hamburger — mobile only */}
+      <button
+        onClick={onMenuClick}
+        className="sm:hidden btn-ghost p-2 h-8 w-8 flex-shrink-0"
+        aria-label="Open navigation"
+      >
+        <Menu className="w-4 h-4" />
+      </button>
+
       {/* Page title */}
       <h1 className="text-base font-semibold text-foreground flex-shrink-0">
         {pageConfig.title}
       </h1>
 
-      {/* Search */}
-      <div className="flex-1 max-w-md">
+      {/* Search — hidden on mobile to keep header uncluttered */}
+      <div className="hidden sm:block flex-1 max-w-md">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <input
@@ -48,7 +61,7 @@ export default function TopBar() {
       <div className="flex-1" />
 
       {/* Notifications */}
-      <button className="relative btn-ghost p-2 h-8 w-8">
+      <button className="relative btn-ghost p-2 h-8 w-8 flex-shrink-0">
         <Bell className="w-4 h-4" />
         <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full" />
       </button>
