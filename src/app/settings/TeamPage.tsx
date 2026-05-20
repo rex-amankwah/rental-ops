@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Users, ShieldCheck, Briefcase, Eye,
   ToggleLeft, ToggleRight, Loader2, AlertTriangle,
-  Mail, Clock, Info, UserPlus, CheckCircle2, X,
+  Mail, Clock, Info, UserPlus, CheckCircle2, X, Pencil, Check,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { formatDate } from '@/lib/constants'
 import { ROLE_COLORS } from '@/lib/statusColors'
+import { isAdmin } from '@/lib/roles'
 import type { Profile, AppRole } from '@/types/database'
 
 // ─── Role details (icon + description only — colors come from ROLE_COLORS) ───
@@ -36,6 +37,45 @@ export default function TeamPage() {
   const [saving, setSaving] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+
+  // ── Inline name editing ──────────────────────────────────────────────────────
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editNameValue, setEditNameValue] = useState('')
+  const [nameSaving, setNameSaving] = useState<string | null>(null)
+
+  const canEditNames = isAdmin(myProfile?.role)
+
+  function startEditName(member: Profile) {
+    setEditingId(member.id)
+    setEditNameValue(member.full_name ?? '')
+    setError(null)
+  }
+
+  function cancelEditName() {
+    setEditingId(null)
+    setEditNameValue('')
+  }
+
+  async function saveEditName(member: Profile) {
+    const trimmed = editNameValue.trim()
+    if (!trimmed) { setError('Name cannot be empty.'); return }
+    if (trimmed.length < 2) { setError('Name must be at least 2 characters.'); return }
+    if (trimmed.length > 80) { setError('Name must be 80 characters or fewer.'); return }
+
+    setNameSaving(member.id)
+    setError(null)
+    const { error: err } = await supabase
+      .from('profiles')
+      .update({ full_name: trimmed, updated_at: new Date().toISOString() })
+      .eq('id', member.id)
+      .eq('company_id', myProfile!.company_id)
+    setNameSaving(null)
+
+    if (err) { setError(err.message); return }
+    setMembers(prev => prev.map(m => m.id === member.id ? { ...m, full_name: trimmed } : m))
+    cancelEditName()
+    flash(`Name updated to "${trimmed}".`)
+  }
 
   const load = useCallback(async () => {
     if (!myProfile?.company_id) return
@@ -217,10 +257,13 @@ export default function TeamPage() {
               const isSelf = member.id === myProfile?.id
               const isSaving = saving === member.id
 
+              const isEditingThis = editingId === member.id
+              const isSavingName  = nameSaving === member.id
+
               return (
                 <div
                   key={member.id}
-                  className={`px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3 transition-opacity ${
+                  className={`group px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3 transition-opacity ${
                     !member.is_active ? 'opacity-55' : ''
                   }`}
                 >
@@ -230,20 +273,67 @@ export default function TeamPage() {
                       <span className="text-xs font-bold text-primary">{initials(member)}</span>
                     </div>
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-medium text-foreground truncate">
-                          {member.full_name ?? '—'}
-                        </p>
-                        {isSelf && (
-                          <span className="badge text-[9px] bg-primary/10 text-primary">You</span>
-                        )}
-                        <span className={`badge text-[9px] ${cfg.bg} ${cfg.color}`}>
-                          {cfg.label}
-                        </span>
-                        {!member.is_active && (
-                          <span className="badge text-[9px] bg-muted text-muted-foreground">Inactive</span>
-                        )}
-                      </div>
+                      {/* Name — static or inline edit */}
+                      {isEditingThis ? (
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <input
+                            autoFocus
+                            type="text"
+                            value={editNameValue}
+                            onChange={e => setEditNameValue(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') saveEditName(member)
+                              if (e.key === 'Escape') cancelEditName()
+                            }}
+                            maxLength={80}
+                            disabled={isSavingName}
+                            className="form-input h-7 text-sm py-0 w-44 disabled:opacity-60"
+                          />
+                          <button
+                            onClick={() => saveEditName(member)}
+                            disabled={isSavingName}
+                            title="Save name"
+                            className="btn-ghost p-1 text-emerald-600 hover:text-emerald-700 disabled:opacity-50"
+                          >
+                            {isSavingName
+                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              : <Check className="w-3.5 h-3.5" />}
+                          </button>
+                          <button
+                            onClick={cancelEditName}
+                            disabled={isSavingName}
+                            title="Cancel"
+                            className="btn-ghost p-1 disabled:opacity-50"
+                          >
+                            <X className="w-3.5 h-3.5 text-muted-foreground" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {member.full_name ?? '—'}
+                          </p>
+                          {canEditNames && (
+                            <button
+                              onClick={() => startEditName(member)}
+                              disabled={!!saving || !!nameSaving}
+                              title="Edit name"
+                              className="btn-ghost p-0.5 opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity disabled:cursor-not-allowed"
+                            >
+                              <Pencil className="w-3 h-3 text-muted-foreground" />
+                            </button>
+                          )}
+                          {isSelf && (
+                            <span className="badge text-[9px] bg-primary/10 text-primary">You</span>
+                          )}
+                          <span className={`badge text-[9px] ${cfg.bg} ${cfg.color}`}>
+                            {cfg.label}
+                          </span>
+                          {!member.is_active && (
+                            <span className="badge text-[9px] bg-muted text-muted-foreground">Inactive</span>
+                          )}
+                        </div>
+                      )}
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
                         <Mail className="w-3 h-3 flex-shrink-0" />
                         <span className="truncate">{member.email}</span>

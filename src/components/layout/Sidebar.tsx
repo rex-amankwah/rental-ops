@@ -86,7 +86,7 @@ export default function Sidebar() {
           )}
         </div>
         <div>
-          <p className="text-sm font-semibold text-sidebar-foreground leading-none">RentalOps</p>
+          <p className="text-sm font-semibold text-sidebar-foreground leading-none">Rentora</p>
           <p className="text-xs text-sidebar-foreground/50 mt-0.5 truncate max-w-[120px]">
             {profile?.companies?.name ?? 'Loading...'}
           </p>

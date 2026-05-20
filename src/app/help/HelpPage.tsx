@@ -132,7 +132,7 @@ export default function HelpPage() {
           <BookOpen className="w-5 h-5 text-primary" />
           <span className="text-xs font-semibold text-primary uppercase tracking-wider">User Guide</span>
         </div>
-        <h1 className="text-2xl font-bold text-foreground">RentalOps Quick User Guide</h1>
+        <h1 className="text-2xl font-bold text-foreground">Rentora Quick User Guide</h1>
         <p className="text-sm text-muted-foreground max-w-xl leading-relaxed">
           This guide helps testers and rental business owners understand how the system works,
           what's currently available, and what's coming. No technical knowledge required.
@@ -362,7 +362,7 @@ export default function HelpPage() {
       {/* Development Status */}
       <Section title="What's Still Being Built" icon={Wrench}>
         <p className="text-sm text-muted-foreground">
-          RentalOps is an active build. The core rental workflow is fully functional.
+          Rentora is an active build. The core rental workflow is fully functional.
           The features below are planned for upcoming phases.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

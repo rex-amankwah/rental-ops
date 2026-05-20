@@ -34,7 +34,7 @@ export default function LoginPage() {
           <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
             <Tent className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xl font-semibold text-white">RentalOps</span>
+          <span className="text-xl font-semibold text-white">Rentora</span>
         </div>
 
         <div>
@@ -63,7 +63,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-sidebar-foreground/30 text-xs">
-          © {new Date().getFullYear()} RentalOps. Built for event rental professionals.
+          © {new Date().getFullYear()} Rentora. Built for event rental professionals.
         </p>
       </div>
 
@@ -75,7 +75,7 @@ export default function LoginPage() {
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <Tent className="w-4 h-4 text-white" />
             </div>
-            <span className="text-lg font-semibold">RentalOps</span>
+            <span className="text-lg font-semibold">Rentora</span>
           </div>
 
           <div className="mb-8">

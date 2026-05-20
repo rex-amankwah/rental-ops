@@ -24,7 +24,7 @@ export default function TopBar() {
     .filter(k => location.pathname.startsWith(k) && k !== '/')
     .sort((a, b) => b.length - a.length)[0] ?? (location.pathname === '/' ? '/' : null)
 
-  const pageConfig = pageKey ? PAGE_TITLES[pageKey] : { title: 'RentalOps' }
+  const pageConfig = pageKey ? PAGE_TITLES[pageKey] : { title: 'Rentora' }
 
   return (
     <header className="flex items-center gap-4 px-6 h-14 border-b border-border bg-background flex-shrink-0">
