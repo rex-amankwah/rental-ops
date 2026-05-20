@@ -127,7 +127,7 @@ export default function SettingsPage() {
         <div>
           <p className="text-xs font-semibold text-foreground">Access control</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Company Settings is accessible to admins and staff. Team &amp; Roles is admin-only.
+            Company Settings is accessible to managers and staff. Team &amp; Roles requires manager or platform admin access.
             Viewers cannot access any settings area.
           </p>
         </div>

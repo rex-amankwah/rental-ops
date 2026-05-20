@@ -9,8 +9,11 @@ type RequiredRole = 'staff' | 'admin'
  * Wraps a route element and renders UnauthorizedPage if the current user's
  * appRole does not satisfy the required minimum role.
  *
- * require="staff"  → blocks viewer (read-only) users
- * require="admin"  → blocks both viewer and staff users
+ * require="staff"  → blocks viewer users only
+ * require="admin"  → blocks viewer and staff; allows manager and platform_admin
+ *
+ * isAdmin() returns true for both 'platform_admin' and 'manager' roles,
+ * so both satisfy require="admin" gates.
  */
 export default function RoleGuard({
   children,

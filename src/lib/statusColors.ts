@@ -97,23 +97,24 @@ export function getExpenseCategoryClass(category: string): string {
   return lookupClass(EXPENSE_CATEGORY_COLORS, category)
 }
 
-// ─── App role (3-role system: admin / staff / viewer) ────────────────────────
+// ─── App role (4-role system: platform_admin / manager / staff / viewer) ─────
 
 export const ROLE_COLORS: Record<string, { label: string; bg: string; color: string }> = {
-  admin:  { label: 'Admin',  bg: 'bg-violet-100', color: 'text-violet-700' },
-  staff:  { label: 'Staff',  bg: 'bg-blue-100',   color: 'text-blue-700' },
-  viewer: { label: 'Viewer', bg: 'bg-slate-100',  color: 'text-slate-600' },
+  platform_admin: { label: 'Platform Admin', bg: 'bg-purple-100', color: 'text-purple-800' },
+  manager:        { label: 'Manager',        bg: 'bg-violet-100', color: 'text-violet-700' },
+  staff:          { label: 'Staff',          bg: 'bg-blue-100',   color: 'text-blue-700' },
+  viewer:         { label: 'Viewer',         bg: 'bg-slate-100',  color: 'text-slate-600' },
 }
 
 /**
- * Legacy role aliases so any code still passing old DB values degrades
- * gracefully instead of showing a blank badge.
+ * Raw DB role values → normalized AppRole key for ROLE_COLORS lookup.
+ * Keeps any code still passing raw DB values working correctly.
  */
 export const ROLE_ALIAS: Record<string, string> = {
-  owner:    'admin',
-  manager:  'staff',
-  driver:   'staff',
-  customer: 'viewer',
+  owner:  'platform_admin',  // DB 'owner'  → Platform Admin
+  admin:  'manager',         // DB 'admin'  → Manager (backward compat)
+  driver: 'staff',
+  // 'customer' intentionally omitted — not an internal operations role
 }
 
 export function getRoleClass(role: string): string {

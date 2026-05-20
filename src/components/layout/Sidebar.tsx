@@ -7,6 +7,7 @@ import {
 import { useAuth } from '@/hooks/useAuth'
 import { isAdmin } from '@/lib/roles'
 import { getInitials } from '@/lib/constants'
+import { ROLE_COLORS } from '@/lib/statusColors'
 
 const ICON_MAP = {
   LayoutDashboard, ClipboardList, Calendar, Package, Truck,
@@ -158,8 +159,8 @@ export default function Sidebar() {
               <p className="text-xs font-medium text-sidebar-foreground truncate">
                 {profile?.full_name ?? profile?.email ?? 'User'}
               </p>
-              <p className="text-[10px] text-sidebar-foreground/50 capitalize">
-                {profile?.role ?? 'staff'}
+              <p className="text-[10px] text-sidebar-foreground/50">
+                {ROLE_COLORS[appRole]?.label ?? 'Staff'}
               </p>
             </div>
             <Settings className="w-3.5 h-3.5 text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70 flex-shrink-0" />
@@ -175,8 +176,8 @@ export default function Sidebar() {
               <p className="text-xs font-medium text-sidebar-foreground truncate">
                 {profile?.full_name ?? profile?.email ?? 'User'}
               </p>
-              <p className="text-[10px] text-sidebar-foreground/50 capitalize">
-                {profile?.role ?? 'staff'}
+              <p className="text-[10px] text-sidebar-foreground/50">
+                {ROLE_COLORS[appRole]?.label ?? 'Staff'}
               </p>
             </div>
           </div>

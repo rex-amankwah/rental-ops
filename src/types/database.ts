@@ -3,11 +3,23 @@
 // ============================================================
 import type { ReactNode } from 'react'
 
-/** Legacy DB role values — kept for reference only. App code uses AppRole. */
+/**
+ * Raw role values as stored in public.profiles.role (DB check constraint).
+ * Kept for reference only — app code uses the normalized AppRole.
+ */
 export type UserRole = 'owner' | 'admin' | 'manager' | 'staff' | 'driver' | 'customer'
 
-/** Normalized 3-role system used throughout the app. */
-export type AppRole = 'admin' | 'staff' | 'viewer'
+/**
+ * Normalized 4-role system used throughout the app.
+ * Mapped from raw DB values via toAppRole() in src/lib/roles.ts.
+ *
+ *   platform_admin  → DB 'owner'   — SaaS / platform owner (highest access)
+ *   manager         → DB 'manager' — Tenant/company admin (full company access)
+ *                     DB 'admin'   — legacy value, treated as manager (backward compat)
+ *   staff           → DB 'staff' / 'driver' — Operational role
+ *   viewer          → DB 'viewer'             — Read-only (customer is not an internal role)
+ */
+export type AppRole = 'platform_admin' | 'manager' | 'staff' | 'viewer'
 
 export type OrderStatus =
   | 'inquiry' | 'quote_sent' | 'awaiting_deposit' | 'confirmed'

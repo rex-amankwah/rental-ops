@@ -9,15 +9,16 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { formatDate } from '@/lib/constants'
 import { ROLE_COLORS } from '@/lib/statusColors'
-import { isAdmin } from '@/lib/roles'
+import { isAdmin, canManageTeam, toAppRole, fromAppRole } from '@/lib/roles'
 import type { Profile, AppRole } from '@/types/database'
 
 // ─── Role details (icon + description only — colors come from ROLE_COLORS) ───
 
 const ROLE_DETAILS: Record<AppRole, { icon: React.ElementType; description: string }> = {
-  admin:  { icon: ShieldCheck, description: 'Full system access including settings and team management' },
-  staff:  { icon: Briefcase,   description: 'All operational workflows — orders, dispatch, returns, invoices' },
-  viewer: { icon: Eye,         description: 'Read-only access to all data, no mutations allowed' },
+  platform_admin: { icon: ShieldCheck, description: 'Platform owner — full access across all companies and settings' },
+  manager:        { icon: ShieldCheck, description: 'Company admin — full access including settings and team management' },
+  staff:          { icon: Briefcase,   description: 'All operational workflows — orders, dispatch, returns, invoices' },
+  viewer:         { icon: Eye,         description: 'Read-only access to all data, no mutations allowed' },
 }
 
 function initials(member: Profile): string {
@@ -43,7 +44,7 @@ export default function TeamPage() {
   const [editNameValue, setEditNameValue] = useState('')
   const [nameSaving, setNameSaving] = useState<string | null>(null)
 
-  const canEditNames = isAdmin(myProfile?.role)
+  const canEditNames = canManageTeam(myProfile?.role)
 
   function startEditName(member: Profile) {
     setEditingId(member.id)
@@ -87,7 +88,12 @@ export default function TeamPage() {
         .eq('company_id', myProfile.company_id)
         .order('created_at', { ascending: true })
       if (err) throw err
-      setMembers((data ?? []) as Profile[])
+      // Normalize raw DB role values (owner/admin/manager/…) → AppRole
+      const normalized = ((data ?? []) as Profile[]).map(m => ({
+        ...m,
+        role: toAppRole(m.role) as AppRole,
+      }))
+      setMembers(normalized)
     } catch (e: unknown) {
       setError((e as { message?: string }).message ?? 'Failed to load team.')
     } finally {
@@ -106,7 +112,7 @@ export default function TeamPage() {
     return members.filter(m => {
       const role = overrides?.id === m.id && overrides.role !== undefined ? overrides.role : m.role
       const active = overrides?.id === m.id && overrides.is_active !== undefined ? overrides.is_active : m.is_active
-      return role === 'admin' && active
+      return isAdmin(role) && active
     }).length
   }
 
@@ -114,33 +120,35 @@ export default function TeamPage() {
     if (saving) return
     setError(null)
 
-    // Guard: would leave zero active admins
-    if (member.role === 'admin' && newRole !== 'admin') {
+    // Guard: would leave zero active managers/platform-admins
+    if (isAdmin(member.role) && !isAdmin(newRole)) {
       if (activeAdminCount({ id: member.id, role: newRole }) < 1) {
-        setError('Cannot demote the last active admin. Promote another member to admin first.')
+        setError('Cannot demote the last active manager. Promote another member to Manager or Platform Admin first.')
         return
       }
     }
 
-    // Warn: self-demotion
-    if (member.id === myProfile?.id && newRole !== 'admin') {
+    // Warn: self-demotion below manager level
+    if (member.id === myProfile?.id && !isAdmin(newRole)) {
       const ok = window.confirm(
-        'You are about to remove your own admin access. You will lose access to Settings immediately. Continue?'
+        'You are about to remove your own manager access. You will lose access to Settings immediately. Continue?'
       )
       if (!ok) return
     }
 
     setSaving(member.id)
+    // Convert AppRole → raw DB value before writing
+    const dbRole = fromAppRole(newRole)
     const { error: err } = await supabase
       .from('profiles')
-      .update({ role: newRole, updated_at: new Date().toISOString() })
+      .update({ role: dbRole, updated_at: new Date().toISOString() })
       .eq('id', member.id)
       .eq('company_id', myProfile!.company_id)
     setSaving(null)
 
     if (err) { setError(err.message); return }
     setMembers(prev => prev.map(m => m.id === member.id ? { ...m, role: newRole } : m))
-    flash(`${member.full_name ?? member.email} is now ${ROLE_COLORS[newRole].label}.`)
+    flash(`${member.full_name ?? member.email} is now ${ROLE_COLORS[newRole]?.label ?? newRole}.`)
   }
 
   async function toggleActive(member: Profile) {
@@ -153,10 +161,10 @@ export default function TeamPage() {
       return
     }
 
-    // Block: deactivating last active admin
-    if (member.role === 'admin' && member.is_active) {
+    // Block: deactivating last active manager/platform-admin
+    if (isAdmin(member.role) && member.is_active) {
       if (activeAdminCount({ id: member.id, is_active: false }) < 1) {
-        setError('Cannot deactivate the last active admin.')
+        setError('Cannot deactivate the last active manager or platform admin.')
         return
       }
     }
@@ -358,9 +366,10 @@ export default function TeamPage() {
                       value={member.role}
                       onChange={e => updateRole(member, e.target.value as AppRole)}
                       disabled={isSaving}
-                      className="form-select h-8 text-xs w-28"
+                      className="form-select h-8 text-xs w-36"
                     >
-                      <option value="admin">Admin</option>
+                      <option value="platform_admin">Platform Admin</option>
+                      <option value="manager">Manager</option>
                       <option value="staff">Staff</option>
                       <option value="viewer">Viewer</option>
                     </select>
