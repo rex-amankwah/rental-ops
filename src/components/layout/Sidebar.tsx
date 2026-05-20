@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, ClipboardList, Calendar, Package, Truck,
   FileText, CreditCard, Users, RotateCcw, AlertTriangle,
-  Receipt, BarChart3, Settings, Tent, ChevronRight, BookOpen
+  Receipt, BarChart3, Settings, Building2, Tent, ChevronRight, BookOpen
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { isAdmin } from '@/lib/roles'
@@ -128,8 +128,9 @@ export default function Sidebar() {
             </p>
             <div className="space-y-0.5">
               {[
-                { href: '/settings',      label: 'Settings', icon: Settings },
-                { href: '/settings/team', label: 'Team & Roles', icon: Users },
+                { href: '/settings',         label: 'Settings',         icon: Settings  },
+                { href: '/settings/company', label: 'Company Settings', icon: Building2 },
+                { href: '/settings/team',    label: 'Team & Roles',     icon: Users     },
               ].map(({ href, label, icon: Icon }) => {
                 const active = isActive(href)
                 return (
