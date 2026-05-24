@@ -43,7 +43,17 @@ export type TrackingType = 'serialized' | 'bulk' | 'hybrid'
 
 export type DepreciationMethod = 'straight_line' | 'none'
 
-export type AssetStatus = 'available' | 'reserved' | 'out' | 'damaged' | 'under_repair' | 'retired' | 'lost'
+export type AssetStatus = 'available' | 'reserved' | 'out' | 'returned' | 'damaged' | 'under_repair' | 'retired' | 'lost'
+
+export type TrackingMode = 'bulk' | 'serialized' | 'bundled_serialized'
+
+export type AssetMovementType =
+  | 'assigned' | 'unassigned'
+  | 'checkout' | 'delivered'
+  | 'checkin' | 'inspected'
+  | 'damaged'
+  | 'maintenance_in' | 'maintenance_out'
+  | 'retired' | 'located' | 'status_change'
 
 export type InventoryCategory = 'chairs' | 'tables' | 'canopies' | 'tents' | 'decor' | 'utensils' | 'linens' | 'other'
 
@@ -150,6 +160,8 @@ export interface InventoryCatalogItem {
   replacement_fee_default: number | null
   condition_notes: string | null
   reorder_point: number | null
+  // Phase 1A: asset tracking mode — 'bulk' | 'serialized' | 'bundled_serialized'
+  tracking_mode: TrackingMode
 }
 
 export interface InventoryAsset {
@@ -375,6 +387,100 @@ export interface TableColumn<T> {
   render?: (row: T) => ReactNode
   sortable?: boolean
   width?: string
+}
+
+// ============================================================
+// Phase 1A/1B asset tracking types
+// ============================================================
+
+export interface AssetBundle {
+  id: string
+  company_id: string
+  bundle_code: string
+  qr_code_value: string | null
+  name: string
+  description: string | null
+  catalog_item_id: string | null
+  is_active: boolean
+  notes: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+  // Joined
+  catalog_item?: Pick<InventoryCatalogItem, 'id' | 'name' | 'category'> | null
+}
+
+export interface AssetBundleMember {
+  id: string
+  company_id: string
+  bundle_id: string
+  asset_id: string
+  added_at: string
+  added_by: string | null
+  removed_at: string | null
+  removed_by: string | null
+  // Joined
+  asset?: InventoryAsset | null
+}
+
+export interface AssetMovement {
+  id: string
+  company_id: string
+  asset_id: string
+  bundle_id: string | null
+  order_id: string | null
+  dispatch_id: string | null
+  return_id: string | null
+  movement_type: AssetMovementType
+  from_status: string | null
+  to_status: string | null
+  from_location: string | null
+  to_location: string | null
+  performed_by: string | null
+  performed_at: string
+  notes: string | null
+  metadata: Record<string, unknown> | null
+}
+
+export interface AssetMaintenance {
+  id: string
+  company_id: string
+  asset_id: string
+  linked_damage_report_id: string | null
+  linked_expense_id: string | null
+  maintenance_type: 'routine_inspection' | 'repair' | 'deep_clean' | 'refurbishment' | 'parts_replacement'
+  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled'
+  title: string
+  description: string | null
+  scheduled_date: string | null
+  started_at: string | null
+  completed_at: string | null
+  estimated_cost: number | null
+  actual_cost: number | null
+  vendor_name: string | null
+  performed_by: string | null
+  photo_urls: string[] | null
+  notes: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface OrderItemAsset {
+  id: string
+  company_id: string
+  order_id: string
+  order_item_id: string
+  asset_id: string
+  bundle_id: string | null
+  assigned_at: string
+  assigned_by: string | null
+  unassigned_at: string | null
+  unassigned_by: string | null
+  notes: string | null
+  // Joined
+  asset?: InventoryAsset | null
+  bundle?: AssetBundle | null
 }
 
 export interface PaginatedResponse<T> {

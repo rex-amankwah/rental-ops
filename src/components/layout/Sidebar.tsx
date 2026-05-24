@@ -2,7 +2,8 @@ import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, ClipboardList, Calendar, Package, Truck,
   FileText, CreditCard, Users, RotateCcw, AlertTriangle,
-  Receipt, BarChart3, Settings, Tent, ChevronRight, BookOpen
+  Receipt, BarChart3, Settings, Tent, ChevronRight, BookOpen,
+  Boxes, ScanLine
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { isAdmin } from '@/lib/roles'
@@ -12,7 +13,7 @@ import { ROLE_COLORS } from '@/lib/statusColors'
 const ICON_MAP = {
   LayoutDashboard, ClipboardList, Calendar, Package, Truck,
   FileText, CreditCard, Users, RotateCcw, AlertTriangle,
-  Receipt, BarChart3, Settings, BookOpen,
+  Receipt, BarChart3, Settings, BookOpen, Boxes, ScanLine,
 }
 
 const NAV_SECTIONS = [
@@ -28,9 +29,11 @@ const NAV_SECTIONS = [
   {
     label: 'Inventory',
     items: [
-      { href: '/inventory', label: 'Inventory',  icon: 'Package' },
-      { href: '/returns',   label: 'Returns',    icon: 'RotateCcw' },
-      { href: '/damages',   label: 'Damages',    icon: 'AlertTriangle' },
+      { href: '/inventory',       label: 'Inventory',      icon: 'Package' },
+      { href: '/assets/bundles',  label: 'Asset Bundles',  icon: 'Boxes' },
+      { href: '/assets/scan',     label: 'Scanner',        icon: 'ScanLine' },
+      { href: '/returns',         label: 'Returns',        icon: 'RotateCcw' },
+      { href: '/damages',         label: 'Damages',        icon: 'AlertTriangle' },
     ],
   },
   {

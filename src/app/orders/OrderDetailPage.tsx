@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, MapPin, Calendar, Package, FileText,
   CreditCard, Clock, User, Phone, Mail, AlertTriangle, Truck,
-  Loader2, CheckCircle2, Pencil
+  Loader2, CheckCircle2, Pencil, Boxes, ScanLine, QrCode, X
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -12,7 +12,9 @@ import { StatusBadge, PriorityBadge } from '@/components/common/StatusBadge'
 import { formatCurrency, formatDate, ORDER_STATUS_CONFIG } from '@/lib/constants'
 import { RESERVATION_STATUS_COLORS, getReservationStatusClass, PAYMENT_STATUS_COLORS, getPaymentStatusClass } from '@/lib/statusColors'
 import { canEdit } from '@/lib/roles'
-import type { RentalOrder, Customer, OrderItem, Invoice, Payment, ActivityLog } from '@/types/database'
+import type { RentalOrder, Customer, OrderItem, Invoice, Payment, ActivityLog, AssetBundle, OrderItemAsset } from '@/types/database'
+import Modal from '@/components/common/Modal'
+import { getAssetStatusClass, getAssetStatusLabel } from '@/lib/statusColors'
 
 type FullOrder = RentalOrder & {
   customer: Customer | null
@@ -30,7 +32,16 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<FullOrder | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
-  const [activeTab, setActiveTab] = useState<'details' | 'items' | 'invoices' | 'payments' | 'activity'>('details')
+  const [activeTab, setActiveTab] = useState<'details' | 'items' | 'invoices' | 'payments' | 'activity' | 'assets'>('details')
+
+  // Asset tracking state
+  const [orderItemAssets, setOrderItemAssets] = useState<(OrderItemAsset & { bundle: AssetBundle | null })[]>([])
+  const [assetsLoading, setAssetsLoading] = useState(false)
+  const [attachModalOpen, setAttachModalOpen] = useState(false)
+  const [attachOrderItemId, setAttachOrderItemId] = useState<string | null>(null)
+  const [availableBundles, setAvailableBundles] = useState<AssetBundle[]>([])
+  const [attachingBundleId, setAttachingBundleId] = useState<string | null>(null)
+  const [attachError, setAttachError] = useState<string | null>(null)
   const [reserving, setReserving] = useState(false)
   const [invoicing, setInvoicing] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -85,6 +96,103 @@ export default function OrderDetailPage() {
   }, [id, profile?.company_id])
 
   useEffect(() => { fetchOrder() }, [fetchOrder])
+
+  // Lazy-fetch order item assets only when assets tab is opened
+  useEffect(() => {
+    if (activeTab !== 'assets' || !id || !profile?.company_id) return
+    async function fetchAssets() {
+      setAssetsLoading(true)
+      try {
+        const { data } = await supabase
+          .from('order_item_assets')
+          .select('*, bundle:asset_bundles(*)')
+          .eq('order_id', id)
+          .eq('company_id', profile!.company_id)
+          .is('unassigned_at', null)
+          .order('assigned_at', { ascending: true })
+        setOrderItemAssets((data ?? []) as (OrderItemAsset & { bundle: AssetBundle | null })[])
+      } finally {
+        setAssetsLoading(false)
+      }
+    }
+    fetchAssets()
+  }, [activeTab, id, profile?.company_id])
+
+  async function openAttachModal(orderItemId: string) {
+    if (!profile?.company_id) return
+    setAttachOrderItemId(orderItemId)
+    setAttachError(null)
+    setAttachModalOpen(true)
+    const { data } = await supabase
+      .from('asset_bundles')
+      .select('*')
+      .eq('company_id', profile.company_id)
+      .eq('is_active', true)
+      .order('bundle_code')
+    setAvailableBundles((data ?? []) as AssetBundle[])
+  }
+
+  async function attachBundle(bundleId: string) {
+    if (!id || !attachOrderItemId || !profile?.company_id || !profile?.id) return
+    setAttachingBundleId(bundleId)
+    setAttachError(null)
+    try {
+      // Get all active bundle members to create order_item_asset rows
+      const { data: members, error: mErr } = await supabase
+        .from('asset_bundle_members')
+        .select('asset_id')
+        .eq('bundle_id', bundleId)
+        .eq('company_id', profile.company_id)
+        .is('removed_at', null)
+      if (mErr) throw mErr
+
+      const rows = (members ?? []).map((m) => ({
+        company_id:    profile!.company_id,
+        order_id:      id,
+        order_item_id: attachOrderItemId,
+        asset_id:      m.asset_id,
+        bundle_id:     bundleId,
+        assigned_by:   profile!.id,
+      }))
+
+      if (rows.length === 0) {
+        setAttachError('This bundle has no active member assets.')
+        return
+      }
+
+      const { error: insertErr } = await supabase.from('order_item_assets').insert(rows)
+      if (insertErr) throw insertErr
+
+      setAttachModalOpen(false)
+      setAttachOrderItemId(null)
+
+      // Refresh assets tab
+      const { data: refreshed } = await supabase
+        .from('order_item_assets')
+        .select('*, bundle:asset_bundles(*)')
+        .eq('order_id', id)
+        .eq('company_id', profile.company_id)
+        .is('unassigned_at', null)
+        .order('assigned_at', { ascending: true })
+      setOrderItemAssets((refreshed ?? []) as (OrderItemAsset & { bundle: AssetBundle | null })[])
+    } catch (err: unknown) {
+      setAttachError(err instanceof Error ? err.message : 'Failed to attach bundle')
+    } finally {
+      setAttachingBundleId(null)
+    }
+  }
+
+  async function detachAsset(assetId: string) {
+    if (!profile?.company_id || !profile?.id) return
+    await supabase
+      .from('order_item_assets')
+      .update({ unassigned_at: new Date().toISOString(), unassigned_by: profile.id })
+      .eq('order_id', id)
+      .eq('asset_id', assetId)
+      .eq('company_id', profile.company_id)
+      .is('unassigned_at', null)
+    setOrderItemAssets((prev) => prev.filter((a) => a.asset_id !== assetId))
+  }
 
   async function handleReserve(override = false) {
     if (!order) return
@@ -178,6 +286,7 @@ export default function OrderDetailPage() {
     { key: 'invoices', label: 'Invoices',  count: order.invoices?.length ?? 0 },
     { key: 'payments', label: 'Payments',  count: order.payments?.length ?? 0 },
     { key: 'activity', label: 'Activity',  count: order.activity_logs?.length ?? 0 },
+    { key: 'assets',   label: 'Assets',    count: null },
   ] as const
 
   return (
@@ -627,6 +736,155 @@ export default function OrderDetailPage() {
                   </table>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Assets tab */}
+          {activeTab === 'assets' && (
+            <div className="space-y-4">
+              {/* Quick actions bar */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <button onClick={() => navigate('/assets/scan')} className="btn-secondary">
+                  <ScanLine className="w-4 h-4" /> Open Scanner
+                </button>
+                <button onClick={() => navigate('/assets/bundles')} className="btn-ghost">
+                  <Boxes className="w-4 h-4" /> Manage Bundles
+                </button>
+              </div>
+
+              {assetsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {/* Per order_item: show assigned assets */}
+                  {(order.order_items ?? []).map((item) => {
+                    const itemAssets = orderItemAssets.filter((a) => a.order_item_id === item.id)
+                    // Unique bundles for this item
+                    const bundles = Array.from(
+                      new Map(itemAssets.filter((a) => a.bundle).map((a) => [a.bundle_id, a.bundle])).values()
+                    ) as AssetBundle[]
+
+                    return (
+                      <div key={item.id} className="bg-card border border-border rounded-xl overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
+                          <div>
+                            <p className="text-sm font-medium text-foreground">{item.item_name_snapshot}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Qty: {item.quantity} · {itemAssets.length} asset{itemAssets.length !== 1 ? 's' : ''} assigned
+                            </p>
+                          </div>
+                          {canEdit(appRole) && (
+                            <button
+                              onClick={() => openAttachModal(item.id)}
+                              className="btn-secondary text-xs py-1.5 px-3"
+                            >
+                              <Boxes className="w-3.5 h-3.5" /> Attach Bundle
+                            </button>
+                          )}
+                        </div>
+
+                        {itemAssets.length === 0 ? (
+                          <div className="px-4 py-4 text-center">
+                            <p className="text-xs text-muted-foreground">No assets assigned to this line item</p>
+                          </div>
+                        ) : (
+                          <div>
+                            {/* Bundle summary rows */}
+                            {bundles.map((b) => b && (
+                              <div key={b.id} className="flex items-center gap-3 px-4 py-3 border-b border-border/50 last:border-b-0">
+                                <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
+                                  <QrCode className="w-3.5 h-3.5 text-indigo-600" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium font-mono text-foreground">{b.bundle_code}</p>
+                                  <p className="text-xs text-muted-foreground">{b.name} · {itemAssets.filter((a) => a.bundle_id === b.id).length} assets</p>
+                                </div>
+                                <button
+                                  onClick={() => navigate(`/assets/bundles/${b.id}`)}
+                                  className="btn-ghost text-xs py-1 px-2"
+                                >
+                                  View
+                                </button>
+                              </div>
+                            ))}
+                            {/* Individual assets not in a bundle */}
+                            {itemAssets.filter((a) => !a.bundle_id).map((a) => (
+                              <div key={a.id} className="flex items-center gap-3 px-4 py-3 border-b border-border/50 last:border-b-0">
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-mono text-muted-foreground">{a.asset_id}</p>
+                                </div>
+                                <span className={`badge text-xs ${getAssetStatusClass(a.asset?.status ?? '')}`}>
+                                  {getAssetStatusLabel(a.asset?.status ?? '')}
+                                </span>
+                                {canEdit(appRole) && (
+                                  <button onClick={() => detachAsset(a.asset_id)} className="btn-ghost p-1.5 text-muted-foreground hover:text-red-600">
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+
+                  {order.order_items?.length === 0 && (
+                    <div className="empty-state">
+                      <div className="empty-state-icon">
+                        <Boxes className="w-7 h-7 text-muted-foreground" />
+                      </div>
+                      <p className="text-sm text-muted-foreground">Add items to this order first</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Attach bundle modal */}
+              <Modal
+                open={attachModalOpen}
+                onClose={() => { setAttachModalOpen(false); setAttachError(null) }}
+                title="Attach Bundle"
+                subtitle="Select a bundle to assign to this order line"
+                size="md"
+                allowBackdropClose
+              >
+                <div className="space-y-3">
+                  {attachError && <div className="alert alert-error text-sm">{attachError}</div>}
+                  {availableBundles.length === 0 ? (
+                    <div className="py-8 text-center">
+                      <Boxes className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">No active bundles found</p>
+                      <button onClick={() => navigate('/assets/bundles/new')} className="btn-primary mt-3 text-sm">
+                        Create Bundle
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-border border border-border rounded-lg overflow-hidden max-h-72 overflow-y-auto">
+                      {availableBundles.map((b) => (
+                        <button
+                          key={b.id}
+                          onClick={() => attachBundle(b.id)}
+                          disabled={!!attachingBundleId}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/40 transition-colors"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
+                            {attachingBundleId === b.id
+                              ? <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />
+                              : <QrCode className="w-4 h-4 text-indigo-600" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-mono font-medium text-foreground">{b.bundle_code}</p>
+                            <p className="text-xs text-muted-foreground">{b.name}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </Modal>
             </div>
           )}
 

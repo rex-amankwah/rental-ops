@@ -35,6 +35,10 @@ import SettingsPage from '@/app/settings/SettingsPage'
 import TeamPage from '@/app/settings/TeamPage'
 import CompanySettingsPage from '@/app/settings/CompanySettingsPage'
 import RoleGuard from '@/components/common/RoleGuard'
+import BundlesPage from '@/app/assets/BundlesPage'
+import BundleDetailPage from '@/app/assets/BundleDetailPage'
+import NewBundlePage from '@/app/assets/NewBundlePage'
+import ScannerPage from '@/app/assets/ScannerPage'
 
 function LoadingScreen() {
   return (
@@ -135,6 +139,12 @@ function AppRoutes() {
         <Route path="inventory/new" element={<RoleGuard require="staff"><NewInventoryPage /></RoleGuard>} />
         <Route path="inventory/:id" element={<InventoryDetailPage />} />
         <Route path="inventory/:id/edit" element={<RoleGuard require="staff"><EditInventoryPage /></RoleGuard>} />
+
+        {/* Asset tracking — Phase 1B */}
+        <Route path="assets/bundles" element={<BundlesPage />} />
+        <Route path="assets/bundles/new" element={<RoleGuard require="admin"><NewBundlePage /></RoleGuard>} />
+        <Route path="assets/bundles/:id" element={<BundleDetailPage />} />
+        <Route path="assets/scan" element={<RoleGuard require="staff"><ScannerPage /></RoleGuard>} />
 
         <Route path="invoices" element={<InvoicesPage />} />
         <Route path="invoices/:id" element={<InvoiceDetailPage />} />

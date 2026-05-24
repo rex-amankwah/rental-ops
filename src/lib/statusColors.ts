@@ -10,8 +10,8 @@
  * use directly in className.
  */
 
-import { DISPATCH_STATUS_CONFIG, ORDER_STATUS_CONFIG, INVOICE_STATUS_CONFIG } from '@/lib/constants'
-import type { DispatchStatus, OrderStatus, InvoiceStatus } from '@/types/database'
+import { DISPATCH_STATUS_CONFIG, ORDER_STATUS_CONFIG, INVOICE_STATUS_CONFIG, ASSET_STATUS_CONFIG, ASSET_MOVEMENT_CONFIG, TRACKING_MODE_CONFIG } from '@/lib/constants'
+import type { DispatchStatus, OrderStatus, InvoiceStatus, AssetStatus, AssetMovementType, TrackingMode } from '@/types/database'
 
 // ─── Fallback ─────────────────────────────────────────────────────────────────
 
@@ -214,6 +214,39 @@ export const ORDER_DISPATCH_BADGE: Record<string, { label: string; bg: string; c
 }, {})
 
 // ─── Bonus: inventory low-stock threshold ─────────────────────────────────────
+
+// ─── Asset status helpers ─────────────────────────────────────────────────────
+
+export function getAssetStatusClass(status: string): string {
+  const cfg = ASSET_STATUS_CONFIG[status as AssetStatus]
+  return cfg ? combinedClass(cfg) : combinedClass(FALLBACK)
+}
+
+export function getAssetStatusLabel(status: string): string {
+  return ASSET_STATUS_CONFIG[status as AssetStatus]?.label ?? status
+}
+
+// ─── Asset movement helpers ───────────────────────────────────────────────────
+
+export function getMovementTypeClass(type: string): string {
+  const cfg = ASSET_MOVEMENT_CONFIG[type as AssetMovementType]
+  return cfg ? combinedClass(cfg) : combinedClass(FALLBACK)
+}
+
+export function getMovementTypeLabel(type: string): string {
+  return ASSET_MOVEMENT_CONFIG[type as AssetMovementType]?.label ?? type
+}
+
+// ─── Tracking mode helpers ────────────────────────────────────────────────────
+
+export function getTrackingModeClass(mode: string): string {
+  const cfg = TRACKING_MODE_CONFIG[mode as TrackingMode]
+  return cfg ? combinedClass(cfg) : combinedClass(FALLBACK)
+}
+
+export function getTrackingModeLabel(mode: string): string {
+  return TRACKING_MODE_CONFIG[mode as TrackingMode]?.label ?? mode
+}
 
 /** Items with quantity_available below this number are considered low-stock. */
 export const LOW_STOCK_THRESHOLD = 3

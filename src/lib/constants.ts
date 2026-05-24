@@ -1,4 +1,4 @@
-import type { OrderStatus, InvoiceStatus, DispatchStatus, AssetStatus } from '@/types/database'
+import type { OrderStatus, InvoiceStatus, DispatchStatus, AssetStatus, TrackingMode, AssetMovementType } from '@/types/database'
 
 // ============================================================
 // ORDER STATUS CONFIG
@@ -79,12 +79,51 @@ export const ASSET_STATUS_CONFIG: Record<AssetStatus, {
   bg: string
 }> = {
   available:    { label: 'Available',    color: 'text-emerald-700', bg: 'bg-emerald-100' },
-  reserved:     { label: 'Reserved',    color: 'text-blue-700',    bg: 'bg-blue-100' },
-  out:          { label: 'Out',         color: 'text-violet-700',  bg: 'bg-violet-100' },
-  damaged:      { label: 'Damaged',     color: 'text-red-700',     bg: 'bg-red-100' },
-  under_repair: { label: 'In Repair',   color: 'text-amber-700',   bg: 'bg-amber-100' },
-  retired:      { label: 'Retired',     color: 'text-gray-600',    bg: 'bg-gray-100' },
-  lost:         { label: 'Lost',        color: 'text-red-900',     bg: 'bg-red-200' },
+  reserved:     { label: 'Reserved',     color: 'text-blue-700',    bg: 'bg-blue-100' },
+  out:          { label: 'Out',          color: 'text-violet-700',  bg: 'bg-violet-100' },
+  returned:     { label: 'Returning',    color: 'text-sky-700',     bg: 'bg-sky-100' },   // back in warehouse, pending inspection
+  damaged:      { label: 'Damaged',      color: 'text-red-700',     bg: 'bg-red-100' },
+  under_repair: { label: 'Maintenance',  color: 'text-amber-700',   bg: 'bg-amber-100' },
+  retired:      { label: 'Retired',      color: 'text-gray-600',    bg: 'bg-gray-100' },
+  lost:         { label: 'Lost',         color: 'text-red-900',     bg: 'bg-red-200' },
+}
+
+// ============================================================
+// TRACKING MODE CONFIG
+// ============================================================
+
+export const TRACKING_MODE_CONFIG: Record<TrackingMode, {
+  label: string
+  description: string
+  color: string
+  bg: string
+}> = {
+  bulk:               { label: 'Bulk',              description: 'Quantity tracking only — no individual asset rows required', color: 'text-slate-600',  bg: 'bg-slate-100' },
+  serialized:         { label: 'Serialized',        description: 'Each unit tracked individually with its own QR code',      color: 'text-indigo-700', bg: 'bg-indigo-100' },
+  bundled_serialized: { label: 'Bundle-Serialized', description: 'Serialized units grouped into carts/bundles for dispatch', color: 'text-purple-700', bg: 'bg-purple-100' },
+}
+
+// ============================================================
+// ASSET MOVEMENT LABELS
+// ============================================================
+
+export const ASSET_MOVEMENT_CONFIG: Record<AssetMovementType, {
+  label: string
+  color: string
+  bg: string
+}> = {
+  assigned:        { label: 'Assigned',         color: 'text-blue-700',    bg: 'bg-blue-100' },
+  unassigned:      { label: 'Unassigned',        color: 'text-slate-600',   bg: 'bg-slate-100' },
+  checkout:        { label: 'Checked Out',       color: 'text-violet-700',  bg: 'bg-violet-100' },
+  delivered:       { label: 'Delivered',         color: 'text-teal-700',    bg: 'bg-teal-100' },
+  checkin:         { label: 'Checked In',        color: 'text-sky-700',     bg: 'bg-sky-100' },
+  inspected:       { label: 'Inspected',         color: 'text-emerald-700', bg: 'bg-emerald-100' },
+  damaged:         { label: 'Damaged',           color: 'text-red-700',     bg: 'bg-red-100' },
+  maintenance_in:  { label: 'Maintenance In',    color: 'text-amber-700',   bg: 'bg-amber-100' },
+  maintenance_out: { label: 'Maintenance Out',   color: 'text-green-700',   bg: 'bg-green-100' },
+  retired:         { label: 'Retired',           color: 'text-gray-600',    bg: 'bg-gray-100' },
+  located:         { label: 'Located',           color: 'text-slate-600',   bg: 'bg-slate-100' },
+  status_change:   { label: 'Status Updated',    color: 'text-orange-700',  bg: 'bg-orange-100' },
 }
 
 // ============================================================
