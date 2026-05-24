@@ -41,7 +41,7 @@ interface ActionConfig {
 const ACTIONS: ActionConfig[] = [
   {
     type: 'checkout',
-    toStatus: 'out',
+    toStatus: 'out_for_delivery',
     label: 'Check Out',
     description: 'Mark all assets as out for delivery',
     icon: <Truck className="w-6 h-6" />,
@@ -49,15 +49,15 @@ const ACTIONS: ActionConfig[] = [
   },
   {
     type: 'checkin',
-    toStatus: 'returned',
+    toStatus: 'returning',
     label: 'Check In',
-    description: 'Mark all assets as returned — pending inspection',
+    description: 'Mark all assets as returning — pending inspection',
     icon: <RotateCcw className="w-6 h-6" />,
     color: 'bg-sky-600 hover:bg-sky-700 text-white',
   },
   {
     type: 'maintenance_in',
-    toStatus: 'under_repair',
+    toStatus: 'maintenance',
     label: 'Maintenance In',
     description: 'Send all assets to maintenance queue',
     icon: <Wrench className="w-6 h-6" />,

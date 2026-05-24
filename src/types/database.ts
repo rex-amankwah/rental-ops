@@ -43,7 +43,21 @@ export type TrackingType = 'serialized' | 'bulk' | 'hybrid'
 
 export type DepreciationMethod = 'straight_line' | 'none'
 
-export type AssetStatus = 'available' | 'reserved' | 'out' | 'returned' | 'damaged' | 'under_repair' | 'retired' | 'lost'
+/**
+ * Operational state of a physical asset (inventory_assets.status).
+ * Exactly 6 values — operational only.
+ *
+ * Physical condition  → inventory_assets.condition ('excellent'|'good'|'fair'|'poor'|'damaged')
+ * Formal damage event → damage_reports table
+ * Lifecycle/disposition (lost, retired) → future dedicated fields/table
+ */
+export type AssetStatus =
+  | 'available'
+  | 'reserved'
+  | 'out_for_delivery'
+  | 'on_site'
+  | 'returning'
+  | 'maintenance'
 
 export type TrackingMode = 'bulk' | 'serialized' | 'bundled_serialized'
 

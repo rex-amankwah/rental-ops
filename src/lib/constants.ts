@@ -78,14 +78,16 @@ export const ASSET_STATUS_CONFIG: Record<AssetStatus, {
   color: string
   bg: string
 }> = {
-  available:    { label: 'Available',    color: 'text-emerald-700', bg: 'bg-emerald-100' },
-  reserved:     { label: 'Reserved',     color: 'text-blue-700',    bg: 'bg-blue-100' },
-  out:          { label: 'Out',          color: 'text-violet-700',  bg: 'bg-violet-100' },
-  returned:     { label: 'Returning',    color: 'text-sky-700',     bg: 'bg-sky-100' },   // back in warehouse, pending inspection
-  damaged:      { label: 'Damaged',      color: 'text-red-700',     bg: 'bg-red-100' },
-  under_repair: { label: 'Maintenance',  color: 'text-amber-700',   bg: 'bg-amber-100' },
-  retired:      { label: 'Retired',      color: 'text-gray-600',    bg: 'bg-gray-100' },
-  lost:         { label: 'Lost',         color: 'text-red-900',     bg: 'bg-red-200' },
+  // Operational states only — 6 values, matches DB CHECK constraint exactly.
+  // Physical condition → inventory_assets.condition
+  // Damage events      → damage_reports table
+  // Lifecycle (lost/retired) → future fields
+  available:        { label: 'Available',        color: 'text-emerald-700', bg: 'bg-emerald-100' },
+  reserved:         { label: 'Reserved',         color: 'text-blue-700',    bg: 'bg-blue-100' },
+  out_for_delivery: { label: 'Out for Delivery', color: 'text-violet-700',  bg: 'bg-violet-100' },
+  on_site:          { label: 'On Site',          color: 'text-purple-700',  bg: 'bg-purple-100' },
+  returning:        { label: 'Returning',        color: 'text-sky-700',     bg: 'bg-sky-100' },
+  maintenance:      { label: 'Maintenance',      color: 'text-amber-700',   bg: 'bg-amber-100' },
 }
 
 // ============================================================
