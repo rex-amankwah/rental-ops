@@ -193,7 +193,17 @@ export default function NewBundlePage() {
       clearDraft()
       navigate(`/assets/bundles/${(data as { id: string }).id}?printLabel=1`)
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to create bundle'
+      // Log the full error so the real Postgres/RLS message is visible in the console
+      console.error('[NewBundlePage] asset_bundles INSERT failed:', err)
+
+      // PostgrestError is a plain object {message, details, hint, code} — not instanceof Error
+      const msg =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'object' && err !== null && 'message' in err
+            ? String((err as Record<string, unknown>).message)
+            : 'Failed to create bundle'
+
       if (msg.includes('unique') || msg.includes('duplicate')) {
         setError(`Bundle code "${form.bundle_code.trim().toUpperCase()}" already exists. Choose a different code.`)
         codeRef.current?.focus()
