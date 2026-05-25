@@ -14,6 +14,7 @@ import { isAdmin } from '@/lib/roles'
 import { PageShell, PageHeader, TableCard, TableToolbar, StatCard } from '@/components/common/PageShell'
 import { DataTable } from '@/components/common/DataTable'
 import { INVENTORY_CATEGORIES } from '@/lib/constants'
+import QRLabelModal from '@/components/assets/QRLabelModal'
 import type { AssetBundle } from '@/types/database'
 
 type BundleRow = AssetBundle & {
@@ -29,6 +30,10 @@ export default function BundlesPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('active')
+
+  // QR label modal — lifted here so list rows can open it without navigating
+  const [qrBundle, setQrBundle] = useState<BundleRow | null>(null)
+  const [qrOpen, setQrOpen] = useState(false)
 
   const fetchBundles = useCallback(async () => {
     if (!profile?.company_id) return
@@ -136,6 +141,19 @@ export default function BundlesPage() {
       key: 'qr_code_value', label: 'QR Value',
       render: (row: BundleRow) => (
         <span className="font-mono text-xs text-muted-foreground">{row.qr_code_value ?? row.bundle_code}</span>
+      ),
+    },
+    {
+      key: 'qr_action', label: '',
+      align: 'right' as const,
+      render: (row: BundleRow) => (
+        <button
+          title="Print QR label"
+          onClick={(e) => { e.stopPropagation(); setQrBundle(row); setQrOpen(true) }}
+          className="p-1.5 rounded-md text-muted-foreground hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+        >
+          <QrCode className="w-4 h-4" />
+        </button>
       ),
     },
     {
@@ -254,6 +272,16 @@ export default function BundlesPage() {
             </button>
           )}
         </div>
+      )}
+
+      {/* QR Label Modal — shared across all rows; opens without page navigation */}
+      {qrBundle && (
+        <QRLabelModal
+          open={qrOpen}
+          onClose={() => setQrOpen(false)}
+          bundle={qrBundle}
+          companyName={profile?.companies?.name ?? 'Rentora'}
+        />
       )}
     </PageShell>
   )

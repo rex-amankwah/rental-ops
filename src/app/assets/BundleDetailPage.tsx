@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft, QrCode, Pencil, Power, Loader2, AlertTriangle,
   Save, X, Clock, ChevronRight, Boxes
@@ -32,6 +32,7 @@ type FullBundle = AssetBundle & {
 export default function BundleDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { profile, appRole } = useAuth()
 
   const [bundle, setBundle] = useState<FullBundle | null>(null)
@@ -86,6 +87,13 @@ export default function BundleDetailPage() {
   }, [id, profile?.company_id])
 
   useEffect(() => { fetchBundle() }, [fetchBundle])
+
+  // Auto-open QR modal when arriving from NewBundlePage with ?printLabel=1
+  useEffect(() => {
+    if (!loading && bundle && searchParams.get('printLabel') === '1') {
+      setQrOpen(true)
+    }
+  }, [loading, bundle, searchParams])
 
   function startEdit() {
     if (!bundle) return
@@ -369,7 +377,13 @@ export default function BundleDetailPage() {
       {/* QR Label Modal */}
       <QRLabelModal
         open={qrOpen}
-        onClose={() => setQrOpen(false)}
+        onClose={() => {
+          setQrOpen(false)
+          // Remove ?printLabel param from URL without adding a history entry
+          if (searchParams.get('printLabel')) {
+            navigate({ search: '' }, { replace: true })
+          }
+        }}
         bundle={bundle}
         companyName={profile?.companies?.name ?? 'Rentora'}
       />

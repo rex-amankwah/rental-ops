@@ -100,7 +100,7 @@ export default function NewBundlePage() {
         .single()
 
       if (e) throw e
-      navigate(`/assets/bundles/${(data as { id: string }).id}`)
+      navigate(`/assets/bundles/${(data as { id: string }).id}?printLabel=1`)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to create bundle'
       if (msg.includes('unique') || msg.includes('duplicate')) {
