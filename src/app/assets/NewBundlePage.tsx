@@ -3,16 +3,34 @@
  *
  * Manager-only form for creating a new asset bundle.
  * qr_code_value is auto-set to bundle_code on create.
+ *
+ * Draft persistence
+ * -----------------
+ * Key:     rentora:newAssetBundleDraft
+ * Saves:   on every field change (via form useEffect)
+ * Restores: on page load / remount (lazy useState initializer)
+ * Clears:  ONLY after successful Supabase INSERT — never on error or validation failure
+ *
+ * Bundle-code auto-suggest
+ * ------------------------
+ * Derived from name (uppercase, spaces → hyphens) while bundle_code is untouched.
+ * Once the user manually edits bundle_code, auto-suggest is permanently disabled
+ * for this session (codeUserEdited ref). Restoring a draft that already has a
+ * bundle_code also locks auto-suggest off.
  */
 
-import { ChangeEvent, useEffect, useState } from 'react'
+import { ChangeEvent, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Save, Loader2, AlertTriangle, Info } from 'lucide-react'
+import { ArrowLeft, Save, Loader2, AlertTriangle, Info, RotateCcw, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { PageShell, PageHeader } from '@/components/common/PageShell'
 import { INVENTORY_CATEGORIES } from '@/lib/constants'
 import type { InventoryCatalogItem } from '@/types/database'
+
+// ── Draft helpers ─────────────────────────────────────────────────────────────
+
+const DRAFT_KEY = 'rentora:newAssetBundleDraft'
 
 interface BundleForm {
   bundle_code: string
@@ -23,23 +41,69 @@ interface BundleForm {
 }
 
 const EMPTY: BundleForm = {
-  bundle_code: '',
-  name: '',
-  description: '',
+  bundle_code:     '',
+  name:            '',
+  description:     '',
   catalog_item_id: '',
-  notes: '',
+  notes:           '',
 }
+
+function loadDraft(): BundleForm {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY)
+    if (raw) return { ...EMPTY, ...JSON.parse(raw) }
+  } catch { /* storage unavailable or corrupt — start fresh */ }
+  return EMPTY
+}
+
+function saveDraft(form: BundleForm): void {
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify(form)) } catch { /* ignore */ }
+}
+
+function clearDraft(): void {
+  try { localStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ }
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export default function NewBundlePage() {
   const { profile } = useAuth()
-  const navigate = useNavigate()
+  const navigate    = useNavigate()
 
-  const [form, setForm] = useState<BundleForm>(EMPTY)
+  // Restore draft via lazy initializer — runs exactly once on mount
+  const [form, setForm]           = useState<BundleForm>(() => loadDraft())
   const [catalogItems, setCatalogItems] = useState<InventoryCatalogItem[]>([])
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving]       = useState(false)
+  const [error, setError]         = useState<string | null>(null)
+  const [draftRestored, setDraftRestored] = useState(false)
 
-  // Load catalog items for the dropdown
+  // Field refs — used for focus on validation failure
+  const nameRef = useRef<HTMLInputElement>(null)
+  const codeRef = useRef<HTMLInputElement>(null)
+
+  // True once user has manually typed in the bundle_code field, OR when a draft
+  // is restored that already has a bundle_code — prevents auto-suggest override.
+  const codeUserEdited = useRef(false)
+
+  // ── On mount: detect restored draft ────────────────────────────────────────
+  useEffect(() => {
+    const hasContent = !!(form.name || form.bundle_code || form.description || form.catalog_item_id || form.notes)
+    if (hasContent) {
+      // If draft has a bundle_code, lock auto-suggest immediately
+      if (form.bundle_code) codeUserEdited.current = true
+      setDraftRestored(true)
+      // Auto-dismiss hint after 5 s
+      const t = setTimeout(() => setDraftRestored(false), 5000)
+      return () => clearTimeout(t)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Persist draft on every form change ─────────────────────────────────────
+  useEffect(() => {
+    saveDraft(form)
+  }, [form])
+
+  // ── Load catalog items ──────────────────────────────────────────────────────
   useEffect(() => {
     async function load() {
       if (!profile?.company_id) return
@@ -54,29 +118,53 @@ export default function NewBundlePage() {
     load()
   }, [profile?.company_id])
 
+  // ── Field handlers ──────────────────────────────────────────────────────────
+
+  /** Generic patch — used for description, catalog_item_id, notes */
   function patch(field: keyof BundleForm, value: string) {
     setForm((f) => ({ ...f, [field]: value }))
     if (error) setError(null)
   }
 
-  // Auto-suggest bundle_code from name (uppercase, replace spaces with hyphens)
+  /** Name field — also drives auto-suggest for bundle_code unless user edited it */
   function handleNameChange(value: string) {
-    patch('name', value)
-    if (!form.bundle_code) {
-      const code = value
+    if (!codeUserEdited.current) {
+      const suggested = value
         .toUpperCase()
         .replace(/[^A-Z0-9\s-]/g, '')
         .trim()
         .replace(/\s+/g, '-')
         .slice(0, 20)
-      setForm((f) => ({ ...f, name: value, bundle_code: code }))
+      setForm((f) => ({ ...f, name: value, bundle_code: suggested }))
+    } else {
+      setForm((f) => ({ ...f, name: value }))
     }
+    if (error) setError(null)
   }
+
+  /** Bundle code field — marks code as user-edited to stop auto-suggest */
+  function handleCodeChange(value: string) {
+    codeUserEdited.current = true
+    setForm((f) => ({ ...f, bundle_code: value.toUpperCase() }))
+    if (error) setError(null)
+  }
+
+  // ── Save ────────────────────────────────────────────────────────────────────
 
   async function save() {
     if (!profile?.company_id) return
-    if (!form.bundle_code.trim()) { setError('Bundle code is required'); return }
-    if (!form.name.trim())        { setError('Bundle name is required'); return }
+
+    // Validate — focus the offending field, keep all other data intact
+    if (!form.bundle_code.trim()) {
+      setError('Bundle code is required')
+      codeRef.current?.focus()
+      return
+    }
+    if (!form.name.trim()) {
+      setError('Bundle name is required')
+      nameRef.current?.focus()
+      return
+    }
 
     setSaving(true)
     setError(null)
@@ -88,7 +176,7 @@ export default function NewBundlePage() {
         .insert({
           company_id:      profile.company_id,
           bundle_code:     code,
-          qr_code_value:   code,             // QR value = bundle_code (same by default)
+          qr_code_value:   code,             // QR value = bundle_code by default
           name:            form.name.trim(),
           description:     form.description.trim() || null,
           catalog_item_id: form.catalog_item_id || null,
@@ -100,18 +188,25 @@ export default function NewBundlePage() {
         .single()
 
       if (e) throw e
+
+      // Clear draft ONLY on successful insert — never on error
+      clearDraft()
       navigate(`/assets/bundles/${(data as { id: string }).id}?printLabel=1`)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to create bundle'
       if (msg.includes('unique') || msg.includes('duplicate')) {
         setError(`Bundle code "${form.bundle_code.trim().toUpperCase()}" already exists. Choose a different code.`)
+        codeRef.current?.focus()
       } else {
         setError(msg)
       }
+      // Draft is NOT cleared — all field data survives the error
     } finally {
       setSaving(false)
     }
   }
+
+  // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <PageShell>
@@ -126,6 +221,23 @@ export default function NewBundlePage() {
       />
 
       <div className="max-w-2xl space-y-5 animate-fade-in">
+
+        {/* Draft restored hint */}
+        {draftRestored && (
+          <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700">
+            <RotateCcw className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="flex-1">Draft restored — your previous entries have been reloaded.</span>
+            <button
+              onClick={() => setDraftRestored(false)}
+              className="text-blue-400 hover:text-blue-700 transition-colors"
+              aria-label="Dismiss"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
+        {/* Validation / save error */}
         {error && (
           <div className="alert alert-error">
             <AlertTriangle className="w-4 h-4 flex-shrink-0" />
@@ -133,13 +245,14 @@ export default function NewBundlePage() {
           </div>
         )}
 
-        {/* Identity */}
+        {/* Bundle Identity */}
         <div className="bg-card border border-border rounded-xl p-6 space-y-4">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Bundle Identity</p>
 
           <div className="space-y-1.5">
             <label className="form-label">Bundle Name <span className="text-destructive">*</span></label>
             <input
+              ref={nameRef}
               type="text"
               value={form.name}
               onChange={(e: ChangeEvent<HTMLInputElement>) => handleNameChange(e.target.value)}
@@ -152,9 +265,10 @@ export default function NewBundlePage() {
           <div className="space-y-1.5">
             <label className="form-label">Bundle Code <span className="text-destructive">*</span></label>
             <input
+              ref={codeRef}
               type="text"
               value={form.bundle_code}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => patch('bundle_code', e.target.value.toUpperCase())}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => handleCodeChange(e.target.value)}
               placeholder="CART-CHAIR-07"
               className="form-input font-mono uppercase"
             />
