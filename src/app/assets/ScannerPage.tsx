@@ -2,7 +2,7 @@
  * ScannerPage — /assets/scan
  *
  * Mobile-first QR scanning interface for field staff.
- * Supports: Check Out, Check In, Maintenance In.
+ * Supports: Check Out, Mark On Site, Check In, Maintenance In.
  *
  * Camera scanning: html5-qrcode (dynamically imported — ~0 impact on initial load)
  * Manual fallback: text input for staff who prefer typing
@@ -19,7 +19,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   X, ArrowLeft, QrCode, Keyboard, CheckCircle2, AlertTriangle,
-  Loader2, Truck, RotateCcw, Wrench, ChevronRight, RefreshCw
+  Loader2, Truck, RotateCcw, Wrench, MapPin, ChevronRight, RefreshCw
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -46,6 +46,14 @@ const ACTIONS: ActionConfig[] = [
     description: 'Mark all assets as out for delivery',
     icon: <Truck className="w-6 h-6" />,
     color: 'bg-violet-600 hover:bg-violet-700 text-white',
+  },
+  {
+    type: 'delivered',
+    toStatus: 'on_site',
+    label: 'Mark On Site',
+    description: 'Confirm assets are set up at venue',
+    icon: <MapPin className="w-6 h-6" />,
+    color: 'bg-emerald-600 hover:bg-emerald-700 text-white',
   },
   {
     type: 'checkin',

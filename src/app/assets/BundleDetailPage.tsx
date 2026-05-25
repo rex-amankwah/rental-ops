@@ -314,6 +314,7 @@ export default function BundleDetailPage() {
           <div className="bg-card border border-border rounded-xl p-6">
             <BundleMembersPanel
               bundleId={bundle.id}
+              bundleCode={bundle.bundle_code}
               catalogItemId={bundle.catalog_item_id}
               onMemberCountChange={setMemberCount}
             />
